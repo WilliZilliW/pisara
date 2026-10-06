@@ -2,7 +2,7 @@
 
 Selainpeli, jossa vesipisaroita liikutellaan lotuksenlehdellä puhelinta kallistamalla. Tavoite on yhdistää kaikki pisarat yhdeksi menettämättä liikaa vettä.
 
-**Pelaa:** https://williziliw.github.io/pisara/
+**Pelaa:** https://willizilliw.github.io/pisara/
 
 ## Pelaaminen
 
