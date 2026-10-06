@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pisara</string>
+    <string name="title_activity_main">Pisara</string>
+    <string name="package_name">io.github.willizilliw.pisara</string>
+    <string name="custom_url_scheme">io.github.willizilliw.pisara</string>
+</resources>

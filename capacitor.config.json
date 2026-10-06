@@ -1,0 +1,12 @@
+{
+  "appId": "io.github.willizilliw.pisara",
+  "appName": "Pisara",
+  "webDir": "www",
+  "backgroundColor": "#0b2427",
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}
