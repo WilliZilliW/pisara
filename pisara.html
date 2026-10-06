@@ -729,6 +729,13 @@ $('btn-play').addEventListener('click', () => {
   begin(Math.min(progress.unlocked, LEVELS.length) - 1);
 });
 $('btn-menu').addEventListener('click', openMenu);
+
+// leaving the app or tab mid-level pauses the game
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') openMenu(); });
+
+// Android back button inside the Capacitor app: back to the level menu, or close the app from the menu
+const capApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+if (capApp) capApp.addListener('backButton', () => { if ($('menu').hidden) openMenu(); else capApp.exitApp(); });
 $('btn-restart').addEventListener('click', () => { unlockAudio(); if (state !== 'menu') startLevel(levelIndex); });
 
 let toastTimer = 0;

@@ -19,6 +19,8 @@ Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee
 
 `index.html` tehdään `pisara.html`-tiedostosta komennolla `sh build.sh`, joten muutokset tehdään `pisara.html`-tiedostoon.
 
+Android-sovelluksen ohjeet: [ANDROID.md](ANDROID.md). Tietosuojaseloste: https://willizilliw.github.io/pisara/tietosuoja.html
+
 ## Testaus
 
 `sh tools/testi.sh` tekee testisivun `_testi.html`, jolla tasot voi tarkistaa selaimessa:
