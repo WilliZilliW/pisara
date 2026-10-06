@@ -1,4 +1,5 @@
-// Walkthroughs found by tools/ratkaisija.js, one per level (level number → moves, each held 0.5 s).
+// Three-star walkthroughs found by tools/ratkaisija.js, one per level (level number → moves, each held 0.5 s).
+// Every one beats its level with at least 95 % of the water and well inside the time limit.
 // Y = ylös, A = alas, V = vasen, O = oikea, '-' = leaf level, '~' = half tilt.
 // Check them with: pisaraSolver.followAll(PISARA_OHJEET)
 window.PISARA_OHJEET = {
@@ -16,7 +17,7 @@ window.PISARA_OHJEET = {
   12: 'AO AO V A AV AV -',
   13: 'YO YO YO Y',
   14: 'AO O A A -',
-  15: 'YO Y Y V -',
+  15: 'YO Y YO AV A A AO O',
   16: 'V YV O Y YV YV',
   17: 'AO AO AO A -',
   18: 'YO YV Y Y A - O O -',
@@ -29,7 +30,7 @@ window.PISARA_OHJEET = {
   25: 'AO AO A AO',
   26: 'AO AO A AO',
   27: 'O YO Y Y -',
-  28: 'Y AO O Y Y YO YO',
+  28: 'YO YO Y AV V A AV AV YV',
   29: 'AV AV AV A -',
   30: 'YV V Y Y -',
   31: 'YV YV YV Y Y -',
@@ -46,20 +47,20 @@ window.PISARA_OHJEET = {
   42: 'O YO Y Y -',
   43: 'YV YV Y YV -',
   44: 'V YV YO YO YV Y Y',
-  45: 'Y YV Y A AV YV AO AO V A YV A -',
+  45: 'A YV Y O A AV YV YO - AV Y AO Y AV A AO YO O AV YV Y -',
   46: 'AO YO A A AO -',
-  47: 'AO YO AO AV A AO',
+  47: 'O~ YV~ A A A AO~ Y O -',
   48: 'AO AO AO A A AO',
   49: 'V YO YO O Y AV AO AV AV YV YV',
-  50: 'YO~ O AV - YO AO AV YO AO~ YV AV A YO',
+  50: 'YO~ AV~ YO~ AV Y AO O AV~ Y - Y AO~ AV~ AV V~ A AO',
   51: 'O AO V A A AO',
   52: 'V V YO Y YV AO O Y -',
   53: 'O AV~ A V YV YV~ YO AO AV AO A O Y YO -',
-  54: 'AV~ YV AO~ AO~ A A A A YV V -',
-  55: 'YV AV V AO A AV -',
+  54: 'O~ V AO~ YO V A YO AV~ A YV V A~ AO AV A -',
+  55: 'YO~ AV~ AV~ Y AO YO A~ O A~ V AO A -',
   56: 'A YO YO V Y YO Y -',
   57: 'O AV YO AO YO V YV Y YO~ A V AO YO~ YO Y AV~ AV V YO YO -',
-  58: 'YO AO YO V Y Y -',
-  59: 'O AV O V A A YV -',
-  60: 'AV YV O - YV YO O AV A YV A AV A',
+  58: 'YO AO YO V YO Y Y',
+  59: 'AO~ YV AO YV~ - AV~ YO O AV A~ A AV -',
+  60: 'AO~ YV~ - AV~ YO YV~ AV Y~ V~ O YV O Y A AV~ AO YO~ AO A',
 };

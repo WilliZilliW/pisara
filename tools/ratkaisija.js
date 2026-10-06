@@ -84,7 +84,8 @@
 
   // beam search over moves
   // moves: which moves to try; stall: give up after this many moves without a better position
-  async function solve(i, { beam = 8, maxMoves = 240, moves = FULL, stall = 40 } = {}) {
+  // keep: discard any line of play that drops below this share of water (0.95 = the water star)
+  async function solve(i, { beam = 8, maxMoves = 240, moves = FULL, stall = 40, keep = 0 } = {}) {
     const { level } = S.load(i);
     let frontier = [{ snap: S.snap(), path: [], score: score(level, S.info()) }];
     let best = frontier[0].score, sinceBest = 0;
@@ -96,6 +97,7 @@
           const [tx, ty] = tiltOf(m);
           S.run(tx, ty, MOVE);
           const info = S.info();
+          if (info.remaining < keep) continue;
           if (info.state === 'won') return { level: i + 1, won: true, path: node.path.concat(m), time: info.time, remaining: info.remaining };
           const sc = score(level, info);
           if (sc <= -1e8) continue;
