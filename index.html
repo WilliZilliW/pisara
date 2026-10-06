@@ -188,7 +188,8 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 // drops: [x, y, r]   walls: [x, y, w, h]   drains: [x, y, r]   rocks (bumps): [x, y, r]
 // suns (evaporate water): [x, y, r]   moss (slows drops): [x, y, w, h]
 // maxLoss: share of the water that may be lost and still pass   par: seconds for the time star
-// gaps: openings in the leaf's rim where drops roll off into the pond: [side, from, to], side 'l' 'r' 't' 'b'.
+// gaps: openings in the leaf's rim where drops roll off into the pond: [side, from, to, corner?], side 'l' 'r' 't' 'b';
+//   a corner gap is two entries (one per side) that both name the corner, e.g. 'tr'.
 //   Default (see makeGaps): none in Kaste, then open corners first and gaps along the sides later.
 const R = (r, list) => list.map(([x, y]) => [x, y, r]);
 const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi'];
@@ -309,10 +310,14 @@ const PISARA_LEVELS = [
   { name: 'Tihkusade', maxLoss: 0.15, par: 60, drains: [[30, 62, 4], [70, 95, 4]], suns: [[50, 78, 8], [50, 128, 6]],
     drops: R(2.8, [[15, 12], [50, 12], [85, 12], [15, 45], [50, 45], [85, 45], [15, 78], [85, 78],
                    [15, 111], [50, 111], [85, 111], [15, 144], [50, 144], [85, 144]]) },
+  // hand-placed rim gaps: random ones could land right where the water leaves the dam
   { name: 'Pato', maxLoss: 0.15, par: 55, walls: [[0, 75, 85, 6]], moss: [[85, 60, 15, 40]],
+    gaps: [['t', 85, 103, 'tr'], ['r', -3, 15, 'tr'], ['b', -3, 15, 'bl'], ['l', 145, 163, 'bl'], ['l', 95, 112]],
     drains: [[30, 110, 5], [60, 120, 5], [85, 140, 4]],
     drops: [...R(3.5, [[10, 10], [40, 10], [70, 10], [20, 45], [50, 45], [80, 40]]), ...R(4, [[15, 145], [50, 150]])] },
+  // hand-placed rim gaps, away from the corridor's turns
   { name: 'Tuulenpuuska', maxLoss: 0.15, par: 60, walls: [[0, 32, 75, 4], [25, 64, 75, 4], [0, 96, 75, 4], [25, 128, 75, 4]],
+    gaps: [['t', -3, 12, 'tl'], ['l', -3, 12, 'tl'], ['t', 52, 68], ['l', 40, 54]],
     suns: [[87, 48, 7], [12, 80, 7], [87, 112, 7]],
     drops: R(3.5, [[40, 16], [50, 48], [50, 80], [50, 112], [50, 144], [15, 144]]) },
   { name: 'Ukkonen', maxLoss: 0.14, par: 75,
@@ -531,7 +536,7 @@ function loadDrops() {
   drops = level.drops.map(([x, y, r]) => makeDrop(x, y, r));
   V0 = drops.reduce((s, d) => s + vol(d), 0);
   remaining = 1;
-  gaps = level.gaps ? level.gaps.map(([side, a, b]) => ({ side, a, b })) : makeGaps();
+  gaps = level.gaps ? level.gaps.map(([side, a, b, corner]) => ({ side, a, b, corner })) : makeGaps();
 }
 
 // Gaps in the leaf's rim, from level 11 on. Corners open first (one in Sadekuuro, up to all four

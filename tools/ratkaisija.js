@@ -77,7 +77,10 @@
   // coarse fingerprint of a position, so the beam does not fill with near-identical states
   const key = info => info.drops.map(([x, y, r]) => `${Math.round(x / 3)},${Math.round(y / 3)},${Math.round(r * 2)}`).sort().join('|');
 
-  const pause = () => new Promise(r => setTimeout(r, 0));
+  // yield to the browser; a MessageChannel is not throttled the way timers are in a hidden tab
+  const channel = new MessageChannel(), waiting = [];
+  channel.port1.onmessage = () => waiting.shift()();
+  const pause = () => new Promise(r => { waiting.push(r); channel.port2.postMessage(0); });
 
   // beam search over moves
   // moves: which moves to try; stall: give up after this many moves without a better position
@@ -107,7 +110,8 @@
       frontier = children.slice(0, beam);
       if (frontier[0].score > best + 1) { best = frontier[0].score; sinceBest = 0; }
       else if (++sinceBest > stall) break;
-      if (depth % 4 === 0) { S.restore(frontier[0].snap); S.show(); await pause(); }
+      if (depth % 4 === 0) { S.restore(frontier[0].snap); S.show(); }
+      await pause();   // yield every move so the page stays responsive
     }
     return { level: i + 1, won: false, path: frontier[0] ? frontier[0].path : [] };
   }
