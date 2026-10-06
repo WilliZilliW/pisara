@@ -11,6 +11,7 @@
     "rakenna": "sh build.sh && sh tools/sovellus.sh && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.2"

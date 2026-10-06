@@ -586,7 +586,26 @@ function makeGaps() {
 }
 const inGap = (side, p) => gaps.some(g => g.side === side && p >= g.a && p <= g.b);
 
+// Keep the screen on while a level is played: tilting the phone does not count as touching it, so the
+// screen would time out mid-level. Menus and result screens let the phone sleep as usual.
+// The Android app uses the keep-awake plugin (WebView has no Wake Lock API); browsers use navigator.wakeLock.
+let wakeLock = null;
+async function screenAwake(on) {
+  if (simMode) return;
+  const plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KeepAwake;
+  try {
+    if (plugin) { await (on ? plugin.keepAwake() : plugin.allowSleep()); return; }
+    if (on && !wakeLock && navigator.wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } else if (!on && wakeLock) {
+      await wakeLock.release(); wakeLock = null;
+    }
+  } catch (e) { wakeLock = null; }
+}
+
 function startLevel(i) {
+  screenAwake(true);
   levelIndex = i; level = LEVELS[i];
   loadDrops();
   splashes = []; pending = [];
@@ -612,6 +631,7 @@ function fmt(t) { return t.toFixed(1).replace('.', ',') + ' s'; }
 function win(kept) {
   if (simMode) { state = 'won'; return; }
   state = 'won';
+  screenAwake(false);
   const key = String(levelIndex + 1);
   const goals = [
     [true, 'Taso läpäisty'],
@@ -644,6 +664,7 @@ function win(kept) {
 function fail() {
   if (simMode) { state = 'failed'; return; }
   state = 'failed';
+  screenAwake(false);
   chord(false); buzz(120);
   $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
   $('res-title').textContent = 'Liikaa vettä menetetty';
@@ -677,6 +698,7 @@ function setActions(list) {
 
 function openMenu() {
   if (state === 'play') state = 'paused';
+  screenAwake(false);
   buildGrid();
   $('result').hidden = true; $('menu').hidden = false;
   $('btn-play').textContent = state === 'paused' ? 'Jatka' : 'Pelaa';
@@ -722,7 +744,6 @@ async function begin(i) {
       }
     } catch (e) {}
     try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(() => {}); } catch (e) {}
-    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
     setTimeout(() => {
       if (sensor.ok) return;
       const touch = matchMedia('(pointer: coarse)').matches;
@@ -735,7 +756,7 @@ async function begin(i) {
 }
 
 $('btn-play').addEventListener('click', () => {
-  if (state === 'paused') { state = 'play'; $('menu').hidden = true; calibrate(); return; }
+  if (state === 'paused') { state = 'play'; $('menu').hidden = true; calibrate(); screenAwake(true); return; }
   begin(Math.min(progress.unlocked, LEVELS.length) - 1);
 });
 $('btn-menu').addEventListener('click', openMenu);
