@@ -23,7 +23,7 @@
     return half ? [x * 0.5, y * 0.5] : [x, y];
   };
 
-  // same scoring idea as the bot: water kept, walking distance between drops (holes block small drops)
+  // score a position: water kept, walking distance between drops (holes block drops smaller than them)
   const W = 100, H = 160, G = 2, GW = W / G, GH = H / G;
   let gridLevel = null; const grids = new Map();
   function blockedGrid(L, rho) {

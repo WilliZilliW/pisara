@@ -119,7 +119,7 @@ Draw-Drop $g 700 330 42
 Save $bmp $g (Join-Path $assets 'icon-foreground.png')
 
 # splash screens (2732, content centred: Android shows only a small middle part)
-foreach ($n in 'splash.png', 'splash-dark.png') {
+foreach ($n in @('splash.png')) {
   $bmp, $g = New-Canvas 2732 2732
   Fill-Pond $g 2732 2732
   Draw-Leaf $g 1366 1366 420

@@ -7,3 +7,9 @@ www/
 
 # test-version signing key (public password "android"); never used for Play releases
 !android/testiavain.keystore
+
+# Android Studio editor settings
+android/.idea/
+
+# personal notes and checklists, kept out of the repo
+omat/

@@ -31,7 +31,7 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - uses: android-actions/setup-android@v3
+      # The Android SDK comes preinstalled on GitHub's Ubuntu runners (ANDROID_HOME), licenses accepted
 
       - name: Build the game for the app (www/)
         run: |

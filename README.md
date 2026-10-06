@@ -19,9 +19,29 @@ Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee
 - `index.html` – koko peli yhdessä tiedostossa (GitHub Pages näyttää tämän).
 - `pisara.html` – sama peli ilman `<html>`/`<head>`-runkoa, Claude-artifaktina julkaisua varten.
 
-`index.html` tehdään `pisara.html`-tiedostosta komennolla `sh build.sh`, joten muutokset tehdään `pisara.html`-tiedostoon.
+- `android/`, `capacitor.config.json` – Android-sovellus (Capacitor 8), joka näyttää pelin `www/`-kansiosta.
+- `assets/` – sovelluskuvakkeiden ja käynnistyskuvan lähdekuvat (piirtää `tools/kuvat.ps1`), `kauppa/` – Play-kaupan kuvat.
+- `tietosuoja.html` – tietosuojaseloste: https://willizilliw.github.io/pisara/tietosuoja.html
 
-Android-sovelluksen ohjeet: [ANDROID.md](ANDROID.md). Tietosuojaseloste: https://willizilliw.github.io/pisara/tietosuoja.html
+Muutokset tehdään `pisara.html`-tiedostoon. `sh build.sh` tekee siitä `index.html`:n, ja `sh tools/sovellus.sh` tekee sovellusversion `www/`-kansioon (fontit mukana, toimii ilman verkkoa). `npm run rakenna` tekee molemmat ja synkronoi Android-projektin.
+
+## Android
+
+Android-projekti rakennetaan Java 21:llä (projektin Gradle 8.14 ei toimi Java 25:llä):
+
+```bash
+npm install
+```
+
+```bash
+npm run rakenna
+```
+
+```bash
+cd android && ./gradlew assembleDebug
+```
+
+GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee saman jokaisesta mainiin pushatusta muutoksesta ja julkaisee APK:n uusimpana releasena. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi versio asentuu edellisen päälle. Play-kaupan julkaisuversio allekirjoitetaan omalla avaimella, jota ei pidetä repossa.
 
 ## Testaus
 
