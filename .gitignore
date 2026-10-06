@@ -1,5 +1,6 @@
+*.jks
+*.keystore
+Pisara-testi.apk
 _testi.html
 node_modules/
 www/
-*.jks
-*.keystore
