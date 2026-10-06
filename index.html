@@ -163,7 +163,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
       <li><b>Näppäimistö:</b> nuolinäppäimet, R aloittaa alusta.</li>
       <li><b>Reiät:</b> reikää pienempi pisara putoaa läpi ja sen vesi menetetään. Isompi pisara vierii yli.</li>
       <li><b>Roiskeet:</b> kova törmäys irrottaa pikkupisaroita, jotka haihtuvat, ellet kerää niitä.</li>
-      <li><b>Tason 10 jälkeen</b> lehden reunat katoavat: reunaton puoli näkyy tummana ja pisara voi valua sen yli lampeen. Lisäksi vastaan tulee kohoumia, aurinkoläikkiä ja sammalta.</li>
+      <li><b>Tason 10 jälkeen</b> lehden reunaan tulee aukkoja, etenkin kulmiin. Aukko näkyy tummana kohtana, ja pisara voi valua siitä lampeen. Lisäksi vastaan tulee kohoumia, aurinkoläikkiä ja sammalta.</li>
     </ul>
     <p class="eyebrow">Maailmat</p>
     <div class="worlds" id="world-tabs"></div>
@@ -190,8 +190,8 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 // suns (evaporate water): [x, y, r]   moss (slows drops): [x, y, w, h]
 // maxLoss: share of the water that may be lost and still pass   par: seconds for the time star
 // tip: shown once when the level starts, to introduce a new element
-// open: leaf sides without a rim, where drops roll off into the pond ('l', 'r', 't', 'b').
-//   Default: none in Kaste, left and right in Sadekuuro, all four from Helle on.
+// gaps: openings in the leaf's rim where drops roll off into the pond: [side, from, to], side 'l' 'r' 't' 'b'.
+//   Default (see makeGaps): none in Kaste, then open corners first and gaps along the sides later.
 const R = (r, list) => list.map(([x, y]) => [x, y, r]);
 const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi'];
 const PISARA_LEVELS = [
@@ -216,7 +216,7 @@ const PISARA_LEVELS = [
     drops: [[10, 10, 3], [90, 10, 3], [50, 62, 3], [30, 80, 3], [70, 80, 3], [50, 150, 3], [10, 122, 3], [90, 122, 3]] },
 
   // ----- Sadekuuro: bumps in the leaf -----
-  { name: 'Kohoumat', maxLoss: 0.25, par: 25, tip: 'Uutta: lehden sivuilta puuttuu reuna, joten pisara voi valua yli lampeen. Lisäksi pisarat kimpoavat pyöreistä kohoumista.',
+  { name: 'Kohoumat', maxLoss: 0.25, par: 25, tip: 'Uutta: lehden reunassa on aukkoja, varsinkin kulmissa. Aukon kohdalla pisara valuu lampeen. Lisäksi pisarat kimpoavat pyöreistä kohoumista.',
     rocks: [[30, 60, 7], [70, 60, 7], [50, 100, 8]],
     drops: R(4, [[15, 20], [85, 20], [50, 40], [20, 130], [80, 130], [50, 145]]) },
   { name: 'Kaksi huonetta', maxLoss: 0.25, par: 25, walls: [[0, 78, 42, 5], [58, 78, 42, 5]],
@@ -241,7 +241,7 @@ const PISARA_LEVELS = [
     drops: R(3.5, [[15, 15], [85, 15], [30, 35], [70, 35], [30, 80], [70, 80], [15, 140], [85, 140], [30, 125], [70, 125]]) },
 
   // ----- Helle: sun spots evaporate water -----
-  { name: 'Auringonläikkä', maxLoss: 0.3, par: 15, tip: 'Nyt reuna puuttuu joka puolelta. Uutta: aurinkoläikät. Kirkkaassa auringossa pisara haihtuu, joten kierrä tai ylitä nopeasti.',
+  { name: 'Auringonläikkä', maxLoss: 0.3, par: 15, tip: 'Uutta: aurinkoläikät. Kirkkaassa auringossa pisara haihtuu, joten kierrä tai ylitä nopeasti.',
     suns: [[50, 80, 14]], drops: R(4.5, [[20, 30], [80, 30], [50, 140]]) },
   { name: 'Kaksi läikkää', maxLoss: 0.28, par: 20, suns: [[30, 55, 12], [70, 105, 12]],
     drops: R(4, [[80, 30], [20, 130], [50, 80], [15, 15]]) },
@@ -400,7 +400,7 @@ let drops = [], splashes = [], pending = [];
 let state = 'menu';        // menu | paused | play | failing | won | failed
 let time = 0, failTimer = 0;
 let loss = { drain: 0, evap: 0, sun: 0, edge: 0 };   // volume lost, by cause
-let open = { l: false, r: false, t: false, b: false }; // leaf sides with no rim
+let gaps = [];   // gaps in the leaf's rim: { side: 'l'|'r'|'t'|'b', a, b } along that side
 let V0 = 1, remaining = 1;
 let view = { w: 0, h: 0, dpr: 1, s: 1, ox: 0, oy: 0 };
 
@@ -524,9 +524,52 @@ function loadDrops() {
   drops = level.drops.map(([x, y, r]) => makeDrop(x, y, r));
   V0 = drops.reduce((s, d) => s + vol(d), 0);
   remaining = 1;
-  const sides = level.open != null ? level.open : levelIndex < 10 ? '' : levelIndex < 20 ? 'lr' : 'lrtb';
-  open = { l: sides.includes('l'), r: sides.includes('r'), t: sides.includes('t'), b: sides.includes('b') };
+  gaps = level.gaps ? level.gaps.map(([side, a, b]) => ({ side, a, b })) : makeGaps();
 }
+
+// Gaps in the leaf's rim, from level 11 on. Corners open first (one in Sadekuuro, up to all four
+// near the end); gaps along the sides join in later levels. Placed deterministically per level,
+// clear of drops that start close to the edge. A corner gap is a pair of side gaps that meet there.
+function makeGaps() {
+  if (levelIndex < 10) return [];
+  const k = levelIndex - 10;
+  const nCorners = Math.min(4, 1 + Math.floor(k / 12));
+  const nSides = Math.floor(k / 20);
+  const rnd = rng(levelIndex * 7 + 3);
+  const out = [];
+  const clear = (side, a, b, margin) => !drops.some(d => {
+    const dist = side === 'l' ? d.x : side === 'r' ? W - d.x : side === 't' ? d.y : H - d.y;
+    const along = side === 'l' || side === 'r' ? d.y : d.x;
+    return dist < d.r + margin && along > a - d.r - 3 && along < b + d.r + 3;
+  });
+
+  const corners = ['tl', 'tr', 'bl', 'br'].map(c => [rnd(), c]).sort((p, q) => p[0] - q[0]).map(p => p[1]);
+  let placed = 0;
+  for (const cn of corners) {
+    if (placed >= nCorners) break;
+    const size = 10 + rnd() * 5 + Math.min(6, k / 8);
+    const vs = cn[0], hs = cn[1];   // 't'/'b' side runs along x, 'l'/'r' side runs along y
+    const ax = hs === 'l' ? [-3, size] : [W - size, W + 3];
+    const ay = vs === 't' ? [-3, size] : [H - size, H + 3];
+    if (!clear(vs, ax[0], ax[1], 5) || !clear(hs, ay[0], ay[1], 5)) continue;
+    out.push({ side: vs, a: ax[0], b: ax[1], corner: cn }, { side: hs, a: ay[0], b: ay[1], corner: cn });
+    placed++;
+  }
+
+  for (let tries = 0, n = 0; n < nSides && tries < 200; tries++) {
+    const pick = rnd() * 520;   // perimeter: two long sides of 160, two short of 100
+    const side = pick < 160 ? 'l' : pick < 320 ? 'r' : pick < 420 ? 't' : 'b';
+    const len = side === 'l' || side === 'r' ? H : W;
+    const size = 12 + rnd() * 6;
+    const a = 10 + rnd() * (len - 20 - size), b = a + size;
+    if (out.some(g => g.side === side && a < g.b + 12 && b > g.a - 12)) continue;
+    if (!clear(side, a, b, 10)) continue;
+    out.push({ side, a, b });
+    n++;
+  }
+  return out;
+}
+const inGap = (side, p) => gaps.some(g => g.side === side && p >= g.a && p <= g.b);
 
 function startLevel(i) {
   levelIndex = i; level = LEVELS[i];
@@ -592,7 +635,7 @@ function fail() {
   const why = {
     drain: 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.',
     evap: 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.',
-    edge: 'Pisara valui lehden reunan yli lampeen. Reunattomalla puolella kallista varovasti ja jarruta ajoissa.',
+    edge: 'Pisara valui reunan aukosta lampeen. Aukot näkyvät tummina kohtina lehden reunassa, useimmiten kulmissa. Jarruta ajoissa niiden lähellä.',
     sun: 'Aurinko haihdutti vettä. Kierrä kirkkaat läikät tai ylitä ne nopeasti, äläkä jätä pisaraa paistumaan.',
   }[cause];
   $('res-facts').innerHTML =
@@ -740,18 +783,18 @@ function split(d, nx, ny, impact) {
 }
 
 function collideWalls(d) {
-  // open sides: once the drop's centre is past the edge it tips over into the pond
-  if ((open.l && d.x < 0) || (open.r && d.x > W) || (open.t && d.y < 0) || (open.b && d.y > H)) {
+  // gaps in the rim: once the drop's centre is past the edge it tips over into the pond
+  if ((d.x < 0 && inGap('l', d.y)) || (d.x > W && inGap('r', d.y)) || (d.y < 0 && inGap('t', d.x)) || (d.y > H && inGap('b', d.x))) {
     d.fall = [d.x + d.vx * 0.25 + Math.sign(d.vx) * d.r, d.y + d.vy * 0.25 + Math.sign(d.vy) * d.r];
     loss.edge += vol(d);
     plip(d.r * 1.8, 0.06); buzz(60);
     return;
   }
-  // rimmed sides
-  if (!open.l && d.x < d.r) { d.x = d.r; hit(d, 1, 0); }
-  if (!open.r && d.x > W - d.r) { d.x = W - d.r; hit(d, -1, 0); }
-  if (!open.t && d.y < d.r) { d.y = d.r; hit(d, 0, 1); }
-  if (!open.b && d.y > H - d.r) { d.y = H - d.r; hit(d, 0, -1); }
+  // the rim everywhere else
+  if (d.x < d.r && !inGap('l', d.y)) { d.x = d.r; hit(d, 1, 0); }
+  if (d.x > W - d.r && !inGap('r', d.y)) { d.x = W - d.r; hit(d, -1, 0); }
+  if (d.y < d.r && !inGap('t', d.x)) { d.y = d.r; hit(d, 0, 1); }
+  if (d.y > H - d.r && !inGap('b', d.x)) { d.y = H - d.r; hit(d, 0, -1); }
   // raised ridges
   for (const [wx, wy, ww, wh] of (level.walls || [])) {
     const cx = Math.max(wx, Math.min(d.x, wx + ww));
@@ -964,11 +1007,24 @@ function renderBg() {
   c.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * oy);
   c.save();
   c.shadowColor = 'rgba(0, 0, 0, 0.45)'; c.shadowBlur = 18 * dpr; c.shadowOffsetY = 4 * dpr;
-  // the dark band around the leaf is its raised rim; open sides have none
-  const x0 = open.l ? 0 : -2, y0 = open.t ? 0 : -2, x1 = open.r ? W : W + 2, y1 = open.b ? H : H + 2;
-  roundRect(c, x0, y0, x1 - x0, y1 - y0, 9);
+  // the dark band around the leaf is its raised rim
+  roundRect(c, -2, -2, W + 4, H + 4, 9);
   c.fillStyle = '#2f6a2e'; c.fill();
   c.restore();
+  // cut the gaps out of the rim by painting the pond back over it
+  const pondF = c.createLinearGradient(0, -oy / s, 0, (h - oy) / s);
+  pondF.addColorStop(0, '#0e2f31'); pondF.addColorStop(1, '#081b1e');
+  c.fillStyle = pondF;
+  for (const g of gaps) {
+    if (g.side === 'l') c.fillRect(-3, g.a, 3.2, g.b - g.a);
+    else if (g.side === 'r') c.fillRect(W - 0.2, g.a, 3.2, g.b - g.a);
+    else if (g.side === 't') c.fillRect(g.a, -3, g.b - g.a, 3.2);
+    else c.fillRect(g.a, H - 0.2, g.b - g.a, 3.2);
+    if (g.corner && (g.side === 't' || g.side === 'b')) {
+      // the rounded corner of the rim itself
+      c.fillRect(g.corner[1] === 'l' ? -3 : W - 8, g.corner[0] === 't' ? -3 : H - 8, 11, 11);
+    }
+  }
 
   c.save();
   roundRect(c, 0, 0, W, H, 7.5); c.clip();
@@ -1003,19 +1059,18 @@ function renderBg() {
     c.fillRect(rnd() * W, rnd() * H, 0.35, 0.35);
   }
 
-  // open sides: the leaf curls down into shadow, with a thin lit lip at the very edge
-  const sideBands = [['l', 0, 0, 1, 0], ['r', W, 0, -1, 0], ['t', 0, 0, 0, 1], ['b', 0, H, 0, -1]];
-  for (const [k, ex, ey, nx, ny] of sideBands) {
-    if (!open[k]) continue;
-    const depth = 5;
-    const g = c.createLinearGradient(ex, ey, ex + nx * depth, ey + ny * depth);
-    g.addColorStop(0, 'rgba(8, 28, 12, 0.6)'); g.addColorStop(1, 'rgba(8, 28, 12, 0)');
-    c.fillStyle = g;
-    if (nx) c.fillRect(nx > 0 ? 0 : W - depth, 0, depth, H); else c.fillRect(0, ny > 0 ? 0 : H - depth, W, depth);
-    c.strokeStyle = 'rgba(225, 250, 200, 0.45)'; c.lineWidth = 0.35; c.setLineDash([1.2, 1.6]);
+  // rim gaps: the leaf curls down into shadow there, with a thin lit lip at the very edge
+  for (const g of gaps) {
+    const depth = 5, a = Math.max(0, g.a), b = Math.min(g.side === 'l' || g.side === 'r' ? H : W, g.b);
+    const [ex, ey, nx, ny] = { l: [0, 0, 1, 0], r: [W, 0, -1, 0], t: [0, 0, 0, 1], b: [0, H, 0, -1] }[g.side];
+    const sg = c.createLinearGradient(ex, ey, ex + nx * depth, ey + ny * depth);
+    sg.addColorStop(0, 'rgba(8, 28, 12, 0.65)'); sg.addColorStop(1, 'rgba(8, 28, 12, 0)');
+    c.fillStyle = sg;
+    if (nx) c.fillRect(nx > 0 ? 0 : W - depth, a, depth, b - a); else c.fillRect(a, ny > 0 ? 0 : H - depth, b - a, depth);
+    c.strokeStyle = 'rgba(225, 250, 200, 0.5)'; c.lineWidth = 0.35; c.setLineDash([1.2, 1.6]);
     c.beginPath();
-    if (nx) { const x = nx > 0 ? 0.25 : W - 0.25; c.moveTo(x, 0); c.lineTo(x, H); }
-    else { const y = ny > 0 ? 0.25 : H - 0.25; c.moveTo(0, y); c.lineTo(W, y); }
+    if (nx) { const x = nx > 0 ? 0.25 : W - 0.25; c.moveTo(x, a); c.lineTo(x, b); }
+    else { const y = ny > 0 ? 0.25 : H - 0.25; c.moveTo(a, y); c.lineTo(b, y); }
     c.stroke(); c.setLineDash([]);
   }
 
