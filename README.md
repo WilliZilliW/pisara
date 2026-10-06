@@ -4,7 +4,7 @@ Selainpeli, jossa vesipisaroita liikutellaan lotuksenlehdellä puhelinta kallist
 
 **Pelaa:** https://willizilliw.github.io/pisara/
 
-**Android-testiversio:** https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk (uusin main, tehdään automaattisesti jokaisesta mainiin pushatusta muutoksesta)
+**Android-testiversio:** https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk (uusin main: jokainen mainiin pushattu muutos korvaa edellisen testiversion)
 
 ## Pelaaminen
 
@@ -41,7 +41,7 @@ npm run rakenna
 cd android && ./gradlew assembleDebug
 ```
 
-GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee saman jokaisesta mainiin pushatusta muutoksesta ja julkaisee APK:n uusimpana releasena. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi versio asentuu edellisen päälle. Play-kaupan julkaisuversio allekirjoitetaan omalla avaimella, jota ei pidetä repossa.
+GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee saman jokaisesta mainiin pushatusta muutoksesta ja julkaisee APK:n releasena `latest`, joka korvaa edellisen. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi versio asentuu edellisen päälle. Play-kaupan julkaisuversio allekirjoitetaan omalla avaimella, jota ei pidetä repossa.
 
 ## Testaus
 

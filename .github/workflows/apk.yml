@@ -1,4 +1,5 @@
-# Builds the Android test version (APK) from every push to main and publishes it as the latest GitHub release.
+# Builds the Android test version (APK) from every push to main and publishes it as the single "latest" GitHub release,
+# replacing the previous one.
 # Newest APK: https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk
 name: Android APK
 
@@ -46,13 +47,15 @@ jobs:
           ./gradlew assembleDebug -PpisaraBuild=${{ github.run_number }} --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../Pisara.apk
 
+      # A single rolling release: the previous "latest" release and tag are replaced by the newest build of main
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           N=${{ github.run_number }}
           MSG=$(git log -1 --pretty=%s)
-          gh release create "testi-$N" Pisara.apk \
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest Pisara.apk \
             --target "${{ github.sha }}" \
             --title "Pisara testiversio $N" \
             --latest \
