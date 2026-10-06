@@ -74,6 +74,15 @@ body {
 .lead { margin: 0; color: var(--muted); line-height: 1.5; }
 h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; line-height: 1.1; text-wrap: balance; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; color: var(--muted); margin: 0; }
+.worlds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: -8px; }
+.world {
+  padding: 8px 6px; border-radius: 12px; border: 1px solid var(--line); background: transparent;
+  color: var(--ink); font: 600 14px var(--body); cursor: pointer; display: grid; gap: 1px; text-align: center;
+}
+.world small { font-weight: 400; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.world[aria-pressed="true"] { background: rgba(191, 230, 255, 0.18); border-color: rgba(191, 230, 255, 0.5); }
+.world:disabled { opacity: 0.35; cursor: default; }
+.world:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
 .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .lvl {
   aspect-ratio: 1; max-width: 100%; border-radius: 50% 50% 50% 50% / 58% 58% 42% 42%;
@@ -140,15 +149,17 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 <div class="overlay" id="menu">
   <div class="panel">
     <h1 class="brand">Pis<i>a</i>ra</h1>
-    <p class="lead">Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran.</p>
+    <p class="lead">Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 60 tasoa kuudessa maailmassa.</p>
     <ul class="how">
       <li><b>Puhelin:</b> kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.</li>
       <li><b>Kosketus tai hiiri:</b> paina ruutua siihen suuntaan, johon haluat kallistaa.</li>
       <li><b>Näppäimistö:</b> nuolinäppäimet, R aloittaa alusta.</li>
       <li><b>Reiät:</b> reikää pienempi pisara putoaa läpi ja sen vesi menetetään. Isompi pisara vierii yli.</li>
       <li><b>Roiskeet:</b> kova törmäys irrottaa pikkupisaroita, jotka haihtuvat, ellet kerää niitä.</li>
+      <li><b>Myöhemmin</b> vastaan tulee kohoumia, aurinkoläikkiä ja sammalta.</li>
     </ul>
-    <p class="eyebrow">Tasot</p>
+    <p class="eyebrow">Maailmat</p>
+    <div class="worlds" id="world-tabs"></div>
     <div class="grid" id="level-grid"></div>
     <div class="row"><button class="btn primary" id="btn-play">Pelaa</button></div>
   </div>
@@ -167,14 +178,15 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 <div class="toast" id="toast" hidden></div>
 
 <script>
-(() => {
-'use strict';
-
 // ---------- Levels (field is 100 × 160 units, portrait) ----------
-// drops: [x, y, r]   walls: [x, y, w, h]   drains: [x, y, r]
+// drops: [x, y, r]   walls: [x, y, w, h]   drains: [x, y, r]   rocks (bumps): [x, y, r]
+// suns (evaporate water): [x, y, r]   moss (slows drops): [x, y, w, h]
 // maxLoss: share of the water that may be lost and still pass   par: seconds for the time star
-const W = 100, H = 160;
-const LEVELS = [
+// tip: shown once when the level starts, to introduce a new element
+const R = (r, list) => list.map(([x, y]) => [x, y, r]);
+const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi'];
+const PISARA_LEVELS = [
+  // ----- Kaste -----
   { name: 'Ensimmäinen kosketus', maxLoss: 0.30, par: 6,  drops: [[30, 45, 5], [70, 115, 5]] },
   { name: 'Kolme kastepisaraa',  maxLoss: 0.25, par: 10, drops: [[20, 30, 4.5], [80, 45, 4.5], [50, 130, 4.5]] },
   { name: 'Neljä kulmaa',        maxLoss: 0.20, par: 15, drops: [[15, 18, 4], [85, 18, 4], [15, 142, 4], [85, 142, 4], [50, 80, 4]] },
@@ -193,7 +205,158 @@ const LEVELS = [
   { name: 'Myrsky',              maxLoss: 0.15, par: 55, walls: [[20, 45, 60, 5], [0, 95, 38, 5], [62, 95, 38, 5]],
     drains: [[50, 25, 5], [15, 70, 5], [85, 70, 5], [50, 122, 6], [20, 146, 4.5], [80, 146, 4.5]],
     drops: [[10, 10, 3], [90, 10, 3], [50, 62, 3], [30, 80, 3], [70, 80, 3], [50, 150, 3], [10, 122, 3], [90, 122, 3]] },
+
+  // ----- Sadekuuro: bumps in the leaf -----
+  { name: 'Kohoumat', maxLoss: 0.25, par: 25, tip: 'Uutta: kohoumat. Pisarat kimpoavat lehden pyöreistä kohoumista.',
+    rocks: [[30, 60, 7], [70, 60, 7], [50, 100, 8]],
+    drops: R(4, [[15, 20], [85, 20], [50, 40], [20, 130], [80, 130], [50, 145]]) },
+  { name: 'Kaksi huonetta', maxLoss: 0.25, par: 25, walls: [[0, 78, 42, 5], [58, 78, 42, 5]],
+    drops: R(4, [[20, 25], [80, 25], [50, 50], [20, 120], [80, 120], [50, 140]]) },
+  { name: 'Reikärivi', maxLoss: 0.22, par: 25, drains: [[20, 80, 5], [50, 80, 5], [80, 80, 5]],
+    drops: R(3.5, [[15, 25], [50, 20], [85, 25], [15, 135], [50, 140], [85, 135]]) },
+  { name: 'Kehä', maxLoss: 0.22, par: 25, rocks: [[50, 55, 6], [30, 80, 6], [70, 80, 6], [50, 105, 6]],
+    drops: R(4, [[12, 15], [88, 15], [12, 145], [88, 145], [50, 80]]) },
+  { name: 'Mutka', maxLoss: 0.22, par: 35, walls: [[25, 0, 6, 110], [69, 50, 6, 110]], drains: [[50, 80, 5]],
+    drops: R(4, [[12, 20], [12, 140], [50, 30], [50, 130], [87, 140], [87, 80]]) },
+  { name: 'Kiviportti', maxLoss: 0.2, par: 30, walls: [[0, 78, 30, 5], [70, 78, 30, 5]], rocks: [[50, 80, 5]],
+    drops: R(4, [[20, 25], [50, 35], [80, 25], [20, 130], [50, 125], [80, 130]]) },
+  { name: 'Sadepisarat', maxLoss: 0.2, par: 35, drains: [[50, 80, 6], [20, 80, 4]],
+    drops: R(3, [[15, 15], [50, 12], [85, 15], [30, 50], [70, 50], [15, 110], [85, 110], [35, 145], [65, 145]]) },
+  { name: 'Lokerot', maxLoss: 0.2, par: 35, walls: [[48, 0, 4, 60], [48, 100, 4, 60], [0, 78, 30, 4], [70, 78, 30, 4]],
+    drops: R(4, [[20, 30], [80, 30], [20, 130], [80, 130], [50, 80]]) },
+  { name: 'Pujottelu', maxLoss: 0.18, par: 35, rocks: [[25, 30, 6], [75, 55, 6], [25, 80, 6], [75, 105, 6], [25, 130, 6]],
+    drops: [[80, 15, 4], [20, 55, 3.5], [80, 80, 3.5], [20, 105, 3.5], [80, 130, 3.5], [50, 150, 4]] },
+  { name: 'Sadekuuro', maxLoss: 0.18, par: 50,
+    walls: [[0, 50, 40, 5], [60, 50, 40, 5], [0, 110, 40, 5], [60, 110, 40, 5]],
+    drains: [[50, 80, 5], [15, 80, 4], [85, 80, 4]], rocks: [[50, 25, 5], [50, 135, 5]],
+    drops: R(3.5, [[15, 15], [85, 15], [30, 35], [70, 35], [30, 80], [70, 80], [15, 140], [85, 140], [30, 125], [70, 125]]) },
+
+  // ----- Helle: sun spots evaporate water -----
+  { name: 'Auringonläikkä', maxLoss: 0.3, par: 15, tip: 'Uutta: aurinkoläikät. Kirkkaassa auringossa pisara haihtuu. Kierrä tai ylitä nopeasti.',
+    suns: [[50, 80, 14]], drops: R(4.5, [[20, 30], [80, 30], [50, 140]]) },
+  { name: 'Kaksi läikkää', maxLoss: 0.28, par: 20, suns: [[30, 55, 12], [70, 105, 12]],
+    drops: R(4, [[80, 30], [20, 130], [50, 80], [15, 15]]) },
+  { name: 'Varjokäytävä', maxLoss: 0.28, par: 25, walls: [[0, 78, 60, 5]], suns: [[80, 80, 10]],
+    drops: R(4, [[20, 30], [50, 40], [80, 25], [30, 130], [75, 130]]) },
+  { name: 'Paahde', maxLoss: 0.25, par: 30, suns: [[50, 80, 22]],
+    drops: R(4, [[10, 15], [90, 15], [10, 145], [90, 145], [10, 80], [90, 80]]) },
+  { name: 'Paahde ja reiät', maxLoss: 0.25, par: 35, suns: [[50, 40, 10], [50, 120, 10]], drains: [[20, 80, 5], [80, 80, 5]],
+    drops: R(3.5, [[15, 15], [85, 15], [15, 145], [85, 145], [50, 80], [30, 100], [70, 60]]) },
+  { name: 'Kuuma lattia', maxLoss: 0.25, par: 35, suns: [[25, 40, 7], [75, 40, 7], [50, 80, 7], [25, 120, 7], [75, 120, 7]],
+    drops: R(3.5, [[50, 40], [25, 80], [75, 80], [50, 120], [50, 15], [50, 150]]) },
+  { name: 'Kiviaavikko', maxLoss: 0.22, par: 40, rocks: [[30, 50, 6], [70, 50, 6], [30, 110, 6], [70, 110, 6]],
+    suns: [[50, 80, 10], [50, 25, 7], [50, 135, 7]],
+    drops: R(3.5, [[10, 20], [90, 20], [10, 80], [90, 80], [10, 140], [90, 140], [50, 55]]) },
+  { name: 'Kuuma käytävä', maxLoss: 0.25, par: 50, walls: [[30, 0, 5, 115], [65, 45, 5, 115]],
+    suns: [[15, 70, 8], [50, 80, 8], [82, 100, 8]],
+    drops: R(3, [[15, 15], [15, 140], [50, 20], [50, 140], [82, 140], [82, 60]]) },
+  { name: 'Kastehelmet', maxLoss: 0.22, par: 45, suns: [[30, 80, 9], [70, 80, 9]],
+    drops: R(3, [[10, 10], [50, 10], [90, 10], [30, 40], [70, 40], [50, 80], [30, 120], [70, 120], [10, 150], [90, 150]]) },
+  { name: 'Helle', maxLoss: 0.22, par: 55, walls: [[35, 78, 30, 5]], drains: [[50, 105, 5], [50, 55, 5]],
+    suns: [[50, 30, 9], [20, 80, 9], [80, 80, 9], [50, 130, 9]],
+    drops: R(3.5, [[10, 10], [90, 10], [10, 150], [90, 150], [50, 92], [35, 65], [65, 100]]) },
+
+  // ----- Sammal: moss slows drops down -----
+  { name: 'Pehmeä sammal', maxLoss: 0.22, par: 15, tip: 'Uutta: sammal. Sammaleessa pisara hidastuu ja tarttuu kiinni.',
+    moss: [[0, 60, 100, 40]], drops: R(4.5, [[25, 25], [75, 30], [30, 130], [70, 135]]) },
+  { name: 'Sammalsaari', maxLoss: 0.22, par: 25, moss: [[30, 55, 40, 50]],
+    drops: R(4, [[15, 20], [85, 20], [15, 140], [85, 140], [50, 80]]) },
+  { name: 'Hidas mutka', maxLoss: 0.2, par: 35, walls: [[0, 50, 70, 5], [30, 105, 70, 5]], moss: [[70, 50, 30, 60]],
+    drops: R(4, [[20, 20], [80, 20], [50, 80], [15, 80], [50, 140], [85, 140]]) },
+  { name: 'Sammal ja reiät', maxLoss: 0.2, par: 35, moss: [[0, 70, 100, 20]], drains: [[30, 80, 5], [70, 80, 5]],
+    drops: R(4, [[20, 25], [50, 30], [80, 25], [20, 135], [50, 130], [80, 135]]) },
+  { name: 'Jarrut', maxLoss: 0.18, par: 40, drains: [[50, 60, 6], [50, 110, 6]], moss: [[35, 20, 30, 20], [35, 130, 30, 20]],
+    drops: R(3.5, [[15, 15], [85, 15], [50, 30], [15, 145], [85, 145], [50, 140], [15, 85], [85, 85]]) },
+  { name: 'Sammalkivikko', maxLoss: 0.18, par: 45, rocks: [[25, 45, 6], [75, 45, 6], [50, 80, 7], [25, 115, 6], [75, 115, 6]],
+    moss: [[0, 0, 100, 25], [0, 135, 100, 25]],
+    drops: R(3.5, [[15, 12], [50, 12], [85, 12], [15, 148], [50, 148], [85, 148], [50, 45], [50, 115]]) },
+  { name: 'Lämmin sammal', maxLoss: 0.18, par: 40, suns: [[25, 80, 10], [75, 80, 10]], moss: [[40, 60, 20, 40]],
+    drops: R(4, [[50, 20], [20, 30], [80, 30], [50, 140], [20, 130], [80, 130]]) },
+  { name: 'Labyrintti', maxLoss: 0.16, par: 55, walls: [[0, 30, 80, 4], [20, 60, 80, 4], [0, 90, 80, 4], [20, 120, 80, 4]],
+    moss: [[0, 64, 20, 26]],
+    drops: R(3.5, [[50, 15], [50, 47], [50, 77], [50, 107], [50, 142], [90, 142]]) },
+  { name: 'Märkä niitty', maxLoss: 0.16, par: 45, moss: [[0, 40, 45, 80], [55, 40, 45, 80]],
+    drops: R(3.5, [[15, 15], [85, 15], [20, 80], [80, 80], [15, 145], [85, 145], [50, 80]]) },
+  { name: 'Sammal', maxLoss: 0.15, par: 60, walls: [[0, 78, 40, 5], [60, 78, 40, 5]], moss: [[40, 70, 20, 20]],
+    drains: [[20, 40, 5], [80, 120, 5]], suns: [[80, 40, 8], [20, 120, 8]],
+    drops: R(3.5, [[10, 10], [50, 15], [90, 10], [50, 55], [10, 150], [50, 145], [90, 150], [50, 105]]) },
+
+  // ----- Ukkonen: everything together -----
+  { name: 'Salama', maxLoss: 0.18, par: 50, walls: [[0, 40, 65, 4], [35, 80, 65, 4], [0, 120, 65, 4]],
+    drains: [[82, 42, 4], [17, 82, 4]],
+    drops: R(3, [[15, 15], [50, 15], [85, 15], [20, 60], [60, 60], [40, 100], [80, 100], [20, 140], [70, 140]]) },
+  { name: 'Rakeet', maxLoss: 0.2, par: 50, rocks: [[35, 40, 5], [65, 80, 5], [35, 120, 5]],
+    drops: R(2.6, [[20, 20], [50, 20], [80, 20], [20, 60], [50, 60], [80, 60], [20, 100], [50, 100], [80, 100], [20, 140], [50, 140], [80, 140]]) },
+  { name: 'Ukkospilvi', maxLoss: 0.18, par: 50, suns: [[50, 50, 12], [50, 110, 12]], rocks: [[20, 80, 6], [80, 80, 6]],
+    drains: [[50, 80, 5]],
+    drops: R(3.5, [[10, 10], [90, 10], [10, 150], [90, 150], [25, 50], [75, 110], [50, 15], [50, 145]]) },
+  { name: 'Kapea silta', maxLoss: 0.15, par: 45, walls: [[0, 60, 42, 40], [58, 60, 42, 40]], drains: [[50, 80, 4]],
+    drops: [...R(3, [[15, 15], [50, 15], [85, 15], [30, 40], [70, 40]]), ...R(3.5, [[20, 130], [50, 145], [80, 130]])] },
+  { name: 'Tulvaportit', maxLoss: 0.18, par: 60,
+    walls: [[20, 0, 4, 70], [20, 90, 4, 70], [48, 0, 4, 40], [48, 60, 4, 40], [48, 120, 4, 40], [76, 0, 4, 70], [76, 90, 4, 70]],
+    moss: [[24, 60, 24, 40]],
+    drops: R(3.5, [[10, 20], [10, 140], [36, 40], [36, 120], [64, 20], [64, 140], [88, 40], [88, 120]]) },
+  { name: 'Myrskyn silmä', maxLoss: 0.15, par: 55, drains: [[50, 80, 4]],
+    rocks: [[78, 80, 5], [69.8, 99.8, 5], [50, 108, 5], [30.2, 99.8, 5], [22, 80, 5], [30.2, 60.2, 5], [50, 52, 5], [69.8, 60.2, 5]],
+    drops: R(3.5, [[10, 10], [90, 10], [10, 150], [90, 150], [8, 80], [92, 80], [50, 15], [50, 145], [50, 65]]) },
+  { name: 'Tihkusade', maxLoss: 0.15, par: 60, drains: [[30, 62, 4], [70, 95, 4]], suns: [[50, 78, 8], [50, 128, 6]],
+    drops: R(2.8, [[15, 12], [50, 12], [85, 12], [15, 45], [50, 45], [85, 45], [15, 78], [85, 78],
+                   [15, 111], [50, 111], [85, 111], [15, 144], [50, 144], [85, 144]]) },
+  { name: 'Pato', maxLoss: 0.15, par: 55, walls: [[0, 75, 85, 6]], moss: [[85, 60, 15, 40]],
+    drains: [[30, 110, 5], [60, 120, 5], [85, 140, 4]],
+    drops: [...R(3.5, [[10, 10], [40, 10], [70, 10], [20, 45], [50, 45], [80, 40]]), ...R(4, [[15, 145], [50, 150]])] },
+  { name: 'Tuulenpuuska', maxLoss: 0.15, par: 60, walls: [[0, 32, 75, 4], [25, 64, 75, 4], [0, 96, 75, 4], [25, 128, 75, 4]],
+    suns: [[87, 48, 7], [12, 80, 7], [87, 112, 7]],
+    drops: R(3.5, [[40, 16], [50, 48], [50, 80], [50, 112], [50, 144], [15, 144]]) },
+  { name: 'Ukkonen', maxLoss: 0.14, par: 75,
+    walls: [[20, 40, 60, 4], [0, 80, 30, 4], [70, 80, 30, 4], [20, 120, 60, 4]], rocks: [[50, 80, 6]],
+    drains: [[10, 40, 4], [90, 40, 4], [10, 120, 4], [90, 120, 4], [50, 60, 4], [50, 100, 4]],
+    suns: [[50, 20, 7], [50, 140, 7]], moss: [[35, 74, 30, 14]],
+    drops: R(3.2, [[10, 10], [90, 10], [50, 8], [30, 60], [70, 60], [30, 100], [70, 100], [10, 150], [90, 150], [50, 152]]) },
+
+  // ----- Lampi: master levels -----
+  { name: 'Kaksi maailmaa', maxLoss: 0.12, par: 45, walls: [[0, 78, 44, 4], [60, 78, 40, 4]], drains: [[52, 80, 5]],
+    drops: R(3.5, [[15, 20], [50, 20], [85, 20], [50, 50], [20, 130], [80, 130]]) },
+  { name: 'Kehäkäytävä', maxLoss: 0.12, par: 60, walls: [[25, 30, 50, 100]], drains: [[12, 80, 5], [88, 80, 5]],
+    suns: [[50, 15, 8], [50, 145, 8]],
+    drops: R(3.5, [[12, 20], [88, 20], [12, 140], [88, 140], [12, 50], [88, 110], [30, 15], [70, 145]]) },
+  { name: 'Sammalsokkelo', maxLoss: 0.12, par: 70, walls: [[0, 30, 80, 4], [20, 62, 80, 4], [0, 94, 80, 4], [20, 126, 80, 4]],
+    moss: [[0, 34, 20, 28], [80, 66, 20, 28], [0, 98, 20, 28]], suns: [[90, 15, 6]],
+    drops: R(3.5, [[50, 15], [50, 48], [50, 80], [50, 112], [50, 144], [10, 144], [90, 144]]) },
+  { name: 'Kaatosade', maxLoss: 0.12, par: 75, rocks: [[25, 80, 5], [75, 80, 5], [50, 35, 5], [50, 125, 5]],
+    drains: [[50, 80, 5], [12, 80, 3.5], [88, 80, 3.5]],
+    drops: R(2.7, [[12, 15], [37, 15], [63, 15], [88, 15], [12, 55], [37, 55], [63, 55], [88, 55],
+                   [12, 105], [37, 105], [63, 105], [88, 105], [12, 145], [37, 145], [63, 145], [88, 145]]) },
+  { name: 'Aurinkokello', maxLoss: 0.14, par: 60, rocks: [[50, 50, 5], [50, 110, 5]],
+    suns: [[50, 80, 9], [20, 40, 7], [80, 40, 7], [20, 120, 7], [80, 120, 7], [50, 15, 6], [50, 145, 6]],
+    drops: R(3.5, [[10, 80], [90, 80], [35, 80], [65, 80], [10, 10], [90, 10], [10, 150], [90, 150]]) },
+  { name: 'Pullonkaula', maxLoss: 0.1, par: 50, walls: [[0, 70, 44, 6], [56, 70, 44, 6]], drains: [[50, 95, 4.5]],
+    drops: [...R(3, [[15, 15], [50, 15], [85, 15], [30, 45], [70, 45]]), ...R(3.5, [[20, 140], [80, 140]])] },
+  { name: 'Kaksoislabyrintti', maxLoss: 0.12, par: 70,
+    walls: [[30, 0, 4, 40], [30, 60, 4, 100], [66, 0, 4, 100], [66, 120, 4, 40], [0, 80, 18, 4], [82, 60, 18, 4]],
+    drains: [[50, 110, 4]], suns: [[83, 100, 6]],
+    drops: R(3.5, [[15, 20], [15, 140], [50, 20], [50, 140], [50, 80], [83, 20], [83, 140]]) },
+  { name: 'Tulikoe', maxLoss: 0.12, par: 60,
+    suns: [[20, 40, 7], [50, 40, 7], [80, 40, 7], [20, 80, 7], [50, 80, 7], [80, 80, 7], [20, 120, 7], [50, 120, 7], [80, 120, 7]],
+    drops: R(3.5, [[35, 60], [65, 60], [35, 100], [65, 100], [50, 15], [50, 145], [6, 80], [94, 80]]) },
+  { name: 'Pimeä lampi', maxLoss: 0.1, par: 70,
+    drains: [[25, 35, 4], [50, 35, 4], [75, 35, 4], [25, 65, 4], [50, 65, 4], [75, 65, 4],
+             [25, 95, 4], [50, 95, 4], [75, 95, 4], [25, 125, 4], [50, 125, 4], [75, 125, 4]],
+    drops: R(3.5, [[12, 20], [88, 20], [37, 50], [63, 50], [37, 80], [63, 80], [37, 110], [63, 110], [12, 145], [88, 145]]) },
+  { name: 'Viimeinen pisara', maxLoss: 0.1, par: 100,
+    walls: [[0, 40, 40, 4], [60, 40, 40, 4], [30, 80, 40, 4], [0, 120, 40, 4], [60, 120, 40, 4]],
+    rocks: [[15, 80, 5], [85, 80, 5]], drains: [[50, 42, 4], [50, 122, 4], [50, 100, 4]],
+    suns: [[50, 60, 7], [20, 100, 6], [80, 100, 6]], moss: [[40, 0, 20, 20], [40, 140, 20, 20]],
+    drops: R(3, [[10, 10], [50, 10], [90, 10], [25, 60], [75, 60], [10, 100], [35, 100], [65, 100], [90, 100],
+                 [10, 150], [50, 150], [90, 150]]) },
 ];
+</script>
+<script>
+(() => {
+'use strict';
+
+const W = 100, H = 160;
+const LEVELS = PISARA_LEVELS, WORLDS = PISARA_WORLDS;
 
 // ---------- Physics constants ----------
 // Drops are treated as near-spheres (a lotus leaf is superhydrophobic), so volume ∝ r³.
@@ -205,6 +368,9 @@ const RESTITUTION = 0.22;
 const SPLIT_SPEED = 72;    // impact speed that tears off a splash droplet
 const EVAP_R = 2.0;        // droplets smaller than this evaporate
 const EVAP_RATE = 0.16;    // radius units per second
+const SUN_RATE = 0.3;      // radius units per second while a drop sits in a sun spot
+const MOSS_DRAG = 5;       // extra velocity decay per second in moss
+const MOSS_GRIP = 3;       // moss holds drops this many times harder
 const SENSITIVITY = 2.3;   // ~26° of tilt = full tilt
 
 // ---------- DOM ----------
@@ -223,13 +389,14 @@ function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress))
 let levelIndex = 0, level = LEVELS[0];
 let drops = [], splashes = [], pending = [];
 let state = 'menu';        // menu | paused | play | failing | won | failed
-let time = 0, failTimer = 0, failReason = '';
+let time = 0, failTimer = 0;
+let loss = { drain: 0, evap: 0, sun: 0 };   // volume lost, by cause
 let V0 = 1, remaining = 1;
 let view = { w: 0, h: 0, dpr: 1, s: 1, ox: 0, oy: 0 };
 
 const vol = d => d.r * d.r * d.r;
 const need = () => 1 - level.maxLoss;
-const pct = v => Math.round(v * 100) + ' %';
+const pct = v => Math.floor(v * 100 + 1e-6) + ' %';   // round down, so "left" never looks like it meets the limit when it doesn't
 
 // ---------- Input ----------
 const pointer = { active: false, t: { x: 0, y: 0 }, sx: 0, sy: 0 };
@@ -353,18 +520,20 @@ function startLevel(i) {
   levelIndex = i; level = LEVELS[i];
   loadDrops();
   splashes = []; pending = [];
-  time = 0; failTimer = 0; failReason = '';
+  time = 0; failTimer = 0;
+  loss = { drain: 0, evap: 0, sun: 0 };
   state = 'play';
   calibrate();
   $('menu').hidden = true; $('result').hidden = true;
   setHudLevel();
   updateHud();
   renderBg();
+  if (level.tip) showToast(level.tip, 5000);
 }
 
 function setHudLevel() {
   $('hud-level').textContent = 'Taso ' + (levelIndex + 1);
-  $('hud-name').textContent = level.name;
+  $('hud-name').textContent = WORLDS[Math.floor(levelIndex / 10)] + ' · ' + level.name;
   $('meter-need').textContent = pct(need());
   $('meter-mark').style.left = `calc(${need() * 100}% - 1px)`;
 }
@@ -407,9 +576,12 @@ function fail() {
   chord(false); buzz(120);
   $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
   $('res-title').textContent = 'Liikaa vettä menetetty';
-  const why = failReason === 'drain'
-    ? 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.'
-    : 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.';
+  const cause = Object.keys(loss).reduce((a, b) => loss[b] > loss[a] ? b : a);
+  const why = {
+    drain: 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.',
+    evap: 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.',
+    sun: 'Aurinko haihdutti vettä. Kierrä kirkkaat läikät tai ylitä ne nopeasti, äläkä jätä pisaraa paistumaan.',
+  }[cause];
   $('res-facts').innerHTML =
     `<div><b>${pct(Math.max(0, remaining))}</b><span>vettä jäljellä</span></div>` +
     `<div><b>${pct(need())}</b><span>vaaditaan</span></div>` +
@@ -438,9 +610,24 @@ function openMenu() {
   $('btn-play').textContent = state === 'paused' ? 'Jatka' : 'Pelaa';
 }
 
-function buildGrid() {
+let menuWorld = 0;
+function buildGrid(world) {
+  menuWorld = world != null ? world : Math.floor(levelIndex / 10);
+  const tabs = $('world-tabs'); tabs.innerHTML = '';
+  WORLDS.forEach((name, w) => {
+    const b = document.createElement('button');
+    b.className = 'world';
+    b.disabled = w * 10 + 1 > progress.unlocked;
+    b.setAttribute('aria-pressed', String(w === menuWorld));
+    let st = 0;
+    for (let i = w * 10; i < w * 10 + 10; i++) st += progress.stars[String(i + 1)] || 0;
+    b.innerHTML = `${name}<small>${b.disabled ? 'lukittu' : st + ' / 30 ★'}</small>`;
+    b.addEventListener('click', () => buildGrid(w));
+    tabs.appendChild(b);
+  });
   const g = $('level-grid'); g.innerHTML = '';
   LEVELS.forEach((L, i) => {
+    if (Math.floor(i / 10) !== menuWorld) return;
     const b = document.createElement('button');
     b.className = 'lvl' + (i === levelIndex ? ' current' : '');
     b.disabled = i + 1 > progress.unlocked;
@@ -564,6 +751,23 @@ function collideWalls(d) {
     }
     hit(d, nx, ny);
   }
+  // round bumps
+  for (const [rx, ry, rr] of (level.rocks || [])) {
+    const dx = d.x - rx, dy = d.y - ry, dist = Math.hypot(dx, dy), min = rr + d.r;
+    if (dist >= min) continue;
+    const nx = dist > 1e-6 ? dx / dist : 0, ny = dist > 1e-6 ? dy / dist : -1;
+    d.x = rx + nx * min; d.y = ry + ny * min;
+    hit(d, nx, ny);
+  }
+}
+
+const inRect = (d, [x, y, w, h]) => d.x >= x && d.x <= x + w && d.y >= y && d.y <= y + h;
+
+// shrink a drop and book the lost volume under its cause
+function shrink(d, dr, cause) {
+  const v = vol(d);
+  d.r = Math.max(0, d.r - dr);
+  loss[cause] += v - vol(d);
 }
 
 function step(dt) {
@@ -582,27 +786,36 @@ function step(dt) {
     d.cool = Math.max(0, d.cool - dt);
     d.splitCool = Math.max(0, d.splitCool - dt);
 
-    // tiny splash droplets evaporate
-    if (d.r < EVAP_R) d.r -= EVAP_RATE * dt;
+    // tiny splash droplets evaporate, and sun spots dry out any drop sitting in them
+    if (d.r < EVAP_R) shrink(d, EVAP_RATE * dt, 'evap');
+    for (const [sx, sy, sr] of (level.suns || [])) {
+      if (Math.hypot(d.x - sx, d.y - sy) >= sr) continue;
+      shrink(d, SUN_RATE * dt, 'sun');
+      if (Math.random() < dt * 14) {
+        splashes.push({ steam: true, x: d.x + (Math.random() - 0.5) * d.r, y: d.y - d.r * 0.4, vx: (Math.random() - 0.5) * 4, vy: -8 - Math.random() * 6, r: 0.6 + Math.random() * 0.8, life: 0.7 + Math.random() * 0.4 });
+      }
+    }
+    if (d.r <= 0.35) continue;   // dried up; removed below
+    const inMoss = (level.moss || []).some(m => inRect(d, m));
 
     let fx = ax, fy = ay;
     for (const [hx, hy, hr] of (level.drains || [])) {
       if (d.r >= hr) continue;                 // too big to fall through: rolls over the hole
       const dx = hx - d.x, dy = hy - d.y, dist = Math.hypot(dx, dy);
       const reach = hr + d.r * 0.8;
-      if (dist < hr * 0.55) { d.fall = [hx, hy]; d.vx = d.vy = 0; failReason = 'drain'; plip(d.r * 1.8, 0.08); buzz(60); break; }
+      if (dist < hr * 0.55) { d.fall = [hx, hy]; d.vx = d.vy = 0; loss.drain += vol(d); plip(d.r * 1.8, 0.08); buzz(60); break; }
       if (dist < reach) { const pull = 320 * (1 - dist / reach); fx += dx / dist * pull; fy += dy / dist * pull; }
     }
     if (d.fall) continue;
 
     const speed = Math.hypot(d.vx, d.vy);
-    const grip = STICK / d.r;
+    const grip = STICK / d.r * (inMoss ? MOSS_GRIP : 1);
     const pinned = speed < 1.2 && Math.hypot(fx, fy) < grip && amag < grip;
     if (pinned) { d.vx = 0; d.vy = 0; }
     else {
       d.vx += fx * dt; d.vy += fy * dt;
       // viscous drag is relatively stronger for small drops
-      const k = Math.exp(-(0.9 + 3 / d.r) * dt);
+      const k = Math.exp(-(0.9 + 3 / d.r + (inMoss ? MOSS_DRAG : 0)) * dt);
       d.vx *= k; d.vy *= k;
       const sp = Math.hypot(d.vx, d.vy);
       if (sp > MAX_SPEED) { d.vx *= MAX_SPEED / sp; d.vy *= MAX_SPEED / sp; }
@@ -654,9 +867,13 @@ function step(dt) {
     }
   }
 
-  for (const s of splashes) { s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.9; s.vy *= 0.9; s.life -= dt; }
+  for (const s of splashes) {
+    s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+    if (s.steam) s.r += dt * 1.5; else { s.vx *= 0.9; s.vy *= 0.9; }
+  }
   splashes = splashes.filter(s => s.life > 0);
 
+  for (const d of drops) if (!d.fall && d.r <= 0.35) loss.evap += vol(d);
   drops = drops.filter(d => d.fall ? d.r > 0.15 : d.r > 0.35);
 
   const alive = drops.filter(d => !d.fall);
@@ -665,7 +882,6 @@ function step(dt) {
   if (state === 'play') {
     if (remaining < need() - 1e-6) {
       state = 'failing';
-      if (!drops.some(d => d.fall)) failReason = 'evap';
     } else {
       const big = alive.filter(d => d.r >= EVAP_R);
       const falling = drops.some(d => d.fall);
@@ -787,6 +1003,42 @@ function renderBg() {
     c.restore();
   }
 
+  // moss: a soft, fuzzy patch of short strands
+  for (const [mx, my, mw, mh] of (level.moss || [])) {
+    c.save();
+    roundRect(c, mx, my, mw, mh, Math.min(3, mw / 2, mh / 2)); c.clip();
+    c.fillStyle = 'rgba(70, 64, 22, 0.42)'; c.fillRect(mx, my, mw, mh);
+    const n = Math.round(mw * mh * 1.6);
+    for (let i = 0; i < n; i++) {
+      const x = mx + rnd() * mw, y = my + rnd() * mh, a = rnd() * Math.PI * 2, l = 0.6 + rnd() * 1.1;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+      c.strokeStyle = rnd() < 0.5 ? 'rgba(160, 170, 70, 0.55)' : 'rgba(40, 60, 18, 0.6)';
+      c.lineWidth = 0.28; c.stroke();
+    }
+    c.restore();
+  }
+
+  // sun spots bleach the leaf beneath them
+  for (const [sx, sy, sr] of (level.suns || [])) {
+    const sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr * 1.15);
+    sg.addColorStop(0, 'rgba(232, 214, 110, 0.55)');
+    sg.addColorStop(0.75, 'rgba(210, 196, 90, 0.35)');
+    sg.addColorStop(1, 'rgba(210, 196, 90, 0)');
+    c.fillStyle = sg;
+    c.beginPath(); c.arc(sx, sy, sr * 1.15, 0, Math.PI * 2); c.fill();
+  }
+
+  // round bumps in the leaf
+  for (const [rx, ry, rr] of (level.rocks || [])) {
+    c.save();
+    c.shadowColor = 'rgba(10, 35, 10, 0.55)'; c.shadowBlur = 4 * dpr * s / 4; c.shadowOffsetX = 0.6 * dpr * s / 4; c.shadowOffsetY = 1 * dpr * s / 4;
+    const bgr = c.createRadialGradient(rx - rr * 0.35, ry - rr * 0.4, rr * 0.1, rx, ry, rr);
+    bgr.addColorStop(0, '#95c977'); bgr.addColorStop(0.6, '#4f8c40'); bgr.addColorStop(1, '#2b5b2a');
+    c.fillStyle = bgr;
+    c.beginPath(); c.arc(rx, ry, rr, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+
   // raised ridges
   for (const [wx, wy, ww, wh] of (level.walls || [])) {
     c.save();
@@ -894,7 +1146,7 @@ function drawBubble() {
   c.fillStyle = 'rgba(250, 255, 240, 0.9)'; c.fill();
 }
 
-function draw() {
+function draw(t) {
   const { dpr, s, ox, oy } = view;
   if (!bg.width || !bg.height) { if (window.innerWidth && window.innerHeight) resize(); return; }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -909,9 +1161,30 @@ function draw() {
     ctx.globalAlpha = d.fall ? Math.min(1, d.r / 2) : d.r < EVAP_R ? Math.min(1, d.r / EVAP_R + 0.2) : 1;
     drawDrop(ctx, d);
   }
+  // sunlight falling on the leaf, gently shimmering with heat
+  if (level.suns) {
+    ctx.globalCompositeOperation = 'screen';
+    level.suns.forEach(([sx, sy, sr], i) => {
+      const px = ox + sx * s, py = oy + sy * s, pr = sr * s * (1.12 + 0.04 * Math.sin(t * 3 + i * 1.7));
+      const g = ctx.createRadialGradient(px, py, 0, px, py, pr);
+      g.addColorStop(0, 'rgba(255, 236, 160, 0.42)');
+      g.addColorStop(0.7, 'rgba(255, 220, 120, 0.22)');
+      g.addColorStop(1, 'rgba(255, 220, 120, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
   for (const p of splashes) {
-    ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2.5));
     const px = ox + p.x * s, py = oy + p.y * s, pr = Math.max(0.8, p.r * s);
+    if (p.steam) {
+      ctx.globalAlpha = Math.max(0, Math.min(0.35, p.life * 0.4));
+      ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245, 250, 255, 1)'; ctx.fill();
+      continue;
+    }
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2.5));
     ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(200, 235, 245, 0.55)'; ctx.fill();
     ctx.beginPath(); ctx.arc(px - pr * 0.35, py - pr * 0.35, pr * 0.35, 0, Math.PI * 2);
@@ -945,7 +1218,7 @@ function frame(now) {
   } else {
     acc = 0;
   }
-  draw();
+  draw(now / 1000);
   requestAnimationFrame(frame);
 }
 
