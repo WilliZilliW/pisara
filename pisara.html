@@ -395,6 +395,7 @@ let time = 0, failTimer = 0;
 let loss = { drain: 0, evap: 0, sun: 0, edge: 0 };   // volume lost, by cause
 let gaps = [];   // gaps in the leaf's rim: { side: 'l'|'r'|'t'|'b', a, b } along that side
 let V0 = 1, remaining = 1;
+let simMode = false;   // set by the test bot: no UI, no live loop stepping
 let view = { w: 0, h: 0, dpr: 1, s: 1, ox: 0, oy: 0 };
 
 const vol = d => d.r * d.r * d.r;
@@ -589,6 +590,7 @@ function setHudLevel() {
 function fmt(t) { return t.toFixed(1).replace('.', ',') + ' s'; }
 
 function win(kept) {
+  if (simMode) { state = 'won'; return; }
   state = 'won';
   const key = String(levelIndex + 1);
   const goals = [
@@ -620,6 +622,7 @@ function win(kept) {
 }
 
 function fail() {
+  if (simMode) { state = 'failed'; return; }
   state = 'failed';
   chord(false); buzz(120);
   $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
@@ -1292,6 +1295,7 @@ function draw(t) {
 let last = performance.now(), acc = 0, hudTick = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  if (simMode) { draw(now / 1000); requestAnimationFrame(frame); return; }
   const target = readTilt();
   tilt.x += (target.x - tilt.x) * Math.min(1, dt * 14);
   tilt.y += (target.y - tilt.y) * Math.min(1, dt * 14);
@@ -1306,6 +1310,46 @@ function frame(now) {
   }
   draw(now / 1000);
   requestAnimationFrame(frame);
+}
+
+// ---------- Test hook (only when a test page sets window.PISARA_TEST) ----------
+if (window.PISARA_TEST) {
+  window.pisaraSim = {
+    count: LEVELS.length,
+    load(i) {
+      simMode = true;
+      levelIndex = i; level = LEVELS[i];
+      loadDrops();
+      splashes = []; pending = [];
+      time = 0; failTimer = 0;
+      loss = { drain: 0, evap: 0, sun: 0, edge: 0 };
+      state = 'play';
+      $('menu').hidden = true; $('result').hidden = true;
+      setHudLevel(); renderBg();
+      return { level, gaps };
+    },
+    snap: () => JSON.stringify({ drops, loss, state, time, failTimer, remaining }),
+    restore(s) {
+      const o = JSON.parse(s);
+      drops = o.drops; loss = o.loss; state = o.state; time = o.time; failTimer = o.failTimer; remaining = o.remaining;
+      pending = []; splashes = [];
+    },
+    // hold a tilt for some seconds of game time
+    run(tx, ty, secs) {
+      tilt = { x: tx, y: ty };
+      const n = Math.round(secs / STEP);
+      for (let i = 0; i < n && (state === 'play' || state === 'failing'); i++) {
+        step(STEP);
+        if (state === 'play') time += STEP;
+      }
+      return state;
+    },
+    info: () => ({
+      state, time, remaining, need: need(), loss: Object.assign({}, loss),
+      drops: drops.filter(d => !d.fall && d.r >= EVAP_R).map(d => [d.x, d.y, d.r]),
+    }),
+    show() { updateHud(); },
+  };
 }
 
 // ---------- Boot ----------
