@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pisara</title>
+<meta name="theme-color" content="#0b2427">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Figtree:wght@400;600&display=swap">
+<style>
+/* Layout: one full-screen canvas (a lotus leaf floating on a dusk pond), a slim HUD with a water gauge on top, overlay panels for menus. Single dark world by design. */
+:root {
+  --pond: #0b2427;
+  --panel: rgba(14, 44, 40, 0.88);
+  --line: rgba(206, 236, 196, 0.16);
+  --ink: #eef6e8;
+  --muted: #a8c6a2;
+  --water: #9fd8f0;
+  --sun: #f4c95d;
+  --sun-ink: #2b2208;
+  --danger: #ff9a7a;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; overflow: hidden; background: var(--pond); color: var(--ink);
+  font-family: var(--body); font-size: 15px;
+  touch-action: none; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.hud {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 2;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 6px;
+  display: grid; gap: 8px;
+}
+.hud-row { display: flex; align-items: center; gap: 10px; }
+.icon-btn {
+  flex: none; width: 40px; height: 40px; border-radius: 12px;
+  border: 1px solid var(--line); background: rgba(10, 34, 32, 0.6); color: var(--ink);
+  display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:focus-visible, .btn:focus-visible, .lvl:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.hud-title { flex: 1; min-width: 0; line-height: 1.15; }
+.hud-title b { font-family: var(--display); font-weight: 600; font-size: 17px; display: block; }
+.hud-title span { color: var(--muted); font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-stats { text-align: right; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.hud-stats b { font-family: var(--display); font-weight: 600; font-size: 17px; display: block; }
+.hud-stats span { color: var(--muted); font-size: 13px; }
+#bubble { width: 38px; height: 38px; flex: none; }
+
+.meter { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter-text { flex: none; min-width: 0; }
+.meter-text b { color: var(--ink); font-weight: 600; }
+.meter-track { position: relative; flex: 1; height: 8px; border-radius: 4px; background: rgba(5, 20, 18, 0.7); border: 1px solid var(--line); overflow: hidden; }
+.meter-fill { position: absolute; inset: 0 auto 0 0; width: 100%; background: linear-gradient(90deg, #5fb3d6, var(--water)); transition: width 0.25s ease-out; }
+.meter-fill.low { background: linear-gradient(90deg, #d9734f, var(--danger)); }
+.meter-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--sun); }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 5; display: grid; place-items: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  background: rgba(5, 22, 20, 0.55); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+  overflow-y: auto;
+}
+.panel {
+  width: min(400px, 100%); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 24px; padding: 26px 22px 22px; display: grid; gap: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.brand { font-family: var(--display); font-weight: 600; font-size: 56px; line-height: 1; margin: 0; letter-spacing: 0.01em; }
+.brand i { font-style: normal; color: var(--water); }
+.lead { margin: 0; color: var(--muted); line-height: 1.5; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; line-height: 1.1; text-wrap: balance; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; color: var(--muted); margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.lvl {
+  aspect-ratio: 1; max-width: 100%; border-radius: 50% 50% 50% 50% / 58% 58% 42% 42%;
+  border: 1px solid var(--line); background: rgba(191, 230, 255, 0.10); color: var(--ink);
+  font-family: var(--display); font-weight: 600; font-size: 20px; cursor: pointer;
+  display: grid; place-content: center; gap: 1px; padding: 0;
+}
+.lvl small { font-family: var(--body); font-size: 10px; color: var(--sun); letter-spacing: 0.05em; }
+.lvl:disabled { opacity: 0.35; cursor: default; }
+.lvl.current { background: rgba(191, 230, 255, 0.24); border-color: rgba(191, 230, 255, 0.5); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  flex: 1; min-width: 120px; padding: 13px 16px; border-radius: 14px; cursor: pointer;
+  font: 600 16px var(--body); border: 1px solid var(--line); background: transparent; color: var(--ink);
+}
+.btn.primary { background: var(--sun); color: var(--sun-ink); border-color: transparent; }
+.stars { display: grid; gap: 6px; }
+.star-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.star-row i { font-style: normal; font-size: 22px; color: var(--sun); width: 22px; text-align: center; line-height: 1; }
+.star-row.off i { color: rgba(244, 201, 93, 0.22); }
+.facts { display: flex; gap: 22px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.facts div { display: grid; gap: 2px; }
+.facts b { font-family: var(--display); font-size: 22px; font-weight: 600; }
+.facts span { color: var(--muted); font-size: 13px; }
+.facts p { margin: 0; color: var(--muted); line-height: 1.45; }
+.how { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.how b { color: var(--ink); font-weight: 600; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%);
+  z-index: 4; width: max-content; max-width: calc(100% - 32px);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 10px 14px; font-size: 14px; line-height: 1.4; color: var(--ink); text-align: center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panel { animation: rise 0.28s ease-out; }
+  @keyframes rise { from { transform: translateY(10px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<header class="hud" id="hud">
+  <div class="hud-row">
+    <button class="icon-btn" id="btn-menu" aria-label="Tasovalikko">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="hud-title"><b id="hud-level">Taso 1</b><span id="hud-name"></span></div>
+    <div class="hud-stats"><b id="hud-count">2</b><span id="hud-time">0,0 s</span></div>
+    <canvas id="bubble" width="76" height="76" aria-hidden="true"></canvas>
+    <button class="icon-btn" id="btn-restart" aria-label="Aloita taso alusta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
+    </button>
+  </div>
+  <div class="meter">
+    <span class="meter-text">Vettä <b id="meter-value">100 %</b> · raja <span id="meter-need">70 %</span></span>
+    <div class="meter-track" role="meter" id="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Vettä jäljellä">
+      <div class="meter-fill" id="meter-fill"></div>
+      <div class="meter-mark" id="meter-mark"></div>
+    </div>
+  </div>
+</header>
+
+<div class="overlay" id="menu">
+  <div class="panel">
+    <h1 class="brand">Pis<i>a</i>ra</h1>
+    <p class="lead">Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran.</p>
+    <ul class="how">
+      <li><b>Puhelin:</b> kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.</li>
+      <li><b>Kosketus tai hiiri:</b> paina ruutua siihen suuntaan, johon haluat kallistaa.</li>
+      <li><b>Näppäimistö:</b> nuolinäppäimet, R aloittaa alusta.</li>
+      <li><b>Reiät:</b> reikää pienempi pisara putoaa läpi ja sen vesi menetetään. Isompi pisara vierii yli.</li>
+      <li><b>Roiskeet:</b> kova törmäys irrottaa pikkupisaroita, jotka haihtuvat, ellet kerää niitä.</li>
+    </ul>
+    <p class="eyebrow">Tasot</p>
+    <div class="grid" id="level-grid"></div>
+    <div class="row"><button class="btn primary" id="btn-play">Pelaa</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="result" hidden>
+  <div class="panel">
+    <p class="eyebrow" id="res-eyebrow">Taso 1</p>
+    <h2 id="res-title">Yksi pisara!</h2>
+    <div class="facts" id="res-facts"></div>
+    <div class="stars" id="res-stars"></div>
+    <div class="row" id="res-actions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- Levels (field is 100 × 160 units, portrait) ----------
+// drops: [x, y, r]   walls: [x, y, w, h]   drains: [x, y, r]
+// maxLoss: share of the water that may be lost and still pass   par: seconds for the time star
+const W = 100, H = 160;
+const LEVELS = [
+  { name: 'Ensimmäinen kosketus', maxLoss: 0.30, par: 6,  drops: [[30, 45, 5], [70, 115, 5]] },
+  { name: 'Kolme kastepisaraa',  maxLoss: 0.25, par: 10, drops: [[20, 30, 4.5], [80, 45, 4.5], [50, 130, 4.5]] },
+  { name: 'Neljä kulmaa',        maxLoss: 0.20, par: 15, drops: [[15, 18, 4], [85, 18, 4], [15, 142, 4], [85, 142, 4], [50, 80, 4]] },
+  { name: 'Väliseinä',           maxLoss: 0.20, par: 18, walls: [[0, 78, 64, 6]],
+    drops: [[20, 30, 4.5], [70, 45, 4.5], [30, 130, 4.5], [78, 118, 4.5]] },
+  { name: 'Reikä lehdessä',      maxLoss: 0.30, par: 18, drains: [[50, 80, 7]],
+    drops: [[20, 30, 4], [80, 30, 4], [20, 130, 4], [80, 130, 4]] },
+  { name: 'Sokkelo',             maxLoss: 0.25, par: 28, walls: [[0, 40, 68, 5], [32, 80, 68, 5], [0, 120, 68, 5]],
+    drops: [[15, 20, 4], [50, 18, 3.5], [85, 62, 4], [15, 100, 4], [85, 145, 4]] },
+  { name: 'Reikäinen lehti',     maxLoss: 0.20, par: 30, drains: [[30, 60, 6], [70, 60, 6], [50, 105, 6], [22, 138, 5], [78, 138, 5]],
+    drops: [[10, 15, 3.5], [90, 15, 3.5], [50, 38, 3.5], [10, 100, 3.5], [90, 100, 3.5], [50, 150, 3.5]] },
+  { name: 'Kapeat käytävät',     maxLoss: 0.20, par: 35, walls: [[32, 0, 4, 118], [64, 42, 4, 118]], drains: [[10, 80, 4.5]],
+    drops: [[16, 20, 3.5], [16, 140, 3.5], [50, 80, 3.5], [50, 20, 3.5], [84, 140, 3.5], [84, 60, 3.5]] },
+  { name: 'Ensin isoksi',        maxLoss: 0.15, par: 35, walls: [[0, 70, 38, 6], [62, 70, 38, 6]], drains: [[50, 73, 4.5]],
+    drops: [[20, 20, 3], [50, 15, 3], [80, 20, 3], [35, 45, 3], [25, 130, 4], [75, 130, 4]] },
+  { name: 'Myrsky',              maxLoss: 0.15, par: 55, walls: [[20, 45, 60, 5], [0, 95, 38, 5], [62, 95, 38, 5]],
+    drains: [[50, 25, 5], [15, 70, 5], [85, 70, 5], [50, 122, 6], [20, 146, 4.5], [80, 146, 4.5]],
+    drops: [[10, 10, 3], [90, 10, 3], [50, 62, 3], [30, 80, 3], [70, 80, 3], [50, 150, 3], [10, 122, 3], [90, 122, 3]] },
+];
+
+// ---------- Physics constants ----------
+// Drops are treated as near-spheres (a lotus leaf is superhydrophobic), so volume ∝ r³.
+const STEP = 1 / 120;
+const GRAVITY = 210;       // units/s² at full tilt
+const MAX_SPEED = 150;
+const STICK = 36;          // contact-line pinning; small drops need more tilt to break free
+const RESTITUTION = 0.22;
+const SPLIT_SPEED = 72;    // impact speed that tears off a splash droplet
+const EVAP_R = 2.0;        // droplets smaller than this evaporate
+const EVAP_RATE = 0.16;    // radius units per second
+const SENSITIVITY = 2.3;   // ~26° of tilt = full tilt
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const cv = $('game'), ctx = cv.getContext('2d');
+const bubbleCv = $('bubble'), bctx = bubbleCv.getContext('2d');
+const bg = document.createElement('canvas'), bgx = bg.getContext('2d');
+
+// ---------- Progress ----------
+const SAVE_KEY = 'pisara-progress-v2';
+let progress = { unlocked: 1, best: {}, stars: {} };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.unlocked) progress = Object.assign(progress, s); } catch (e) {}
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch (e) {} }
+
+// ---------- State ----------
+let levelIndex = 0, level = LEVELS[0];
+let drops = [], splashes = [], pending = [];
+let state = 'menu';        // menu | paused | play | failing | won | failed
+let time = 0, failTimer = 0, failReason = '';
+let V0 = 1, remaining = 1;
+let view = { w: 0, h: 0, dpr: 1, s: 1, ox: 0, oy: 0 };
+
+const vol = d => d.r * d.r * d.r;
+const need = () => 1 - level.maxLoss;
+const pct = v => Math.round(v * 100) + ' %';
+
+// ---------- Input ----------
+const pointer = { active: false, t: { x: 0, y: 0 }, sx: 0, sy: 0 };
+const keys = new Set();
+const sensor = { ok: false, raw: null, cal: { b: 0, g: 0 }, t: { x: 0, y: 0 } };
+let tilt = { x: 0, y: 0 };
+
+function clampLen(v, max = 1) {
+  const l = Math.hypot(v.x, v.y);
+  return l > max ? { x: v.x / l * max, y: v.y / l * max } : v;
+}
+
+function screenAngle() {
+  const a = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+  return ((a % 360) + 360) % 360;
+}
+
+window.addEventListener('deviceorientation', e => {
+  if (e.beta == null || e.gamma == null) return;
+  if (!sensor.ok) { sensor.ok = true; sensor.cal = { b: e.beta, g: e.gamma }; hideToast(); }
+  sensor.raw = { b: e.beta, g: e.gamma };
+  const db = (e.beta - sensor.cal.b) * Math.PI / 180;
+  const dg = (e.gamma - sensor.cal.g) * Math.PI / 180;
+  let x = Math.sin(dg) * SENSITIVITY, y = Math.sin(db) * SENSITIVITY;
+  const a = screenAngle();
+  if (a === 90) [x, y] = [-y, x];
+  else if (a === 270) [x, y] = [y, -x];
+  else if (a === 180) [x, y] = [-x, -y];
+  const t = clampLen({ x, y });
+  if (Math.hypot(t.x, t.y) < 0.03) { t.x = 0; t.y = 0; }
+  sensor.t = t;
+});
+
+function calibrate() {
+  if (sensor.raw && Math.abs(sensor.raw.b) < 75) sensor.cal = { b: sensor.raw.b, g: sensor.raw.g };
+}
+
+function pointerTilt(e) {
+  const cx = view.ox + W * view.s / 2, cy = view.oy + H * view.s / 2;
+  const reach = Math.min(W, H) * view.s * 0.45;
+  pointer.sx = e.clientX; pointer.sy = e.clientY;
+  pointer.t = clampLen({ x: (e.clientX - cx) / reach, y: (e.clientY - cy) / reach });
+}
+cv.addEventListener('pointerdown', e => {
+  unlockAudio();
+  pointer.active = true; pointerTilt(e);
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+});
+cv.addEventListener('pointermove', e => { if (pointer.active) pointerTilt(e); });
+const endPointer = () => { pointer.active = false; };
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+
+const KEYMAP = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd', a: 'l', d: 'r', w: 'u', s: 'd' };
+window.addEventListener('keydown', e => {
+  unlockAudio();
+  if (KEYMAP[e.key]) { keys.add(KEYMAP[e.key]); e.preventDefault(); }
+  if ((e.key === 'r' || e.key === 'R') && (state === 'play' || state === 'failed' || state === 'won')) startLevel(levelIndex);
+});
+window.addEventListener('keyup', e => { if (KEYMAP[e.key]) keys.delete(KEYMAP[e.key]); });
+window.addEventListener('blur', () => { keys.clear(); pointer.active = false; });
+
+function readTilt() {
+  if (pointer.active) return pointer.t;
+  if (keys.size) {
+    return clampLen({ x: (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0), y: (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0) });
+  }
+  if (sensor.ok) return sensor.t;
+  return { x: 0, y: 0 };
+}
+
+// ---------- Audio (starts after first interaction) ----------
+let audio = null;
+function unlockAudio() {
+  if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+  try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+}
+// a water "bloop": a sine whose pitch rises as the merged bubble resonates
+function plip(r, gain = 0.12) {
+  if (!audio) return;
+  const t = audio.currentTime;
+  const o = audio.createOscillator(), g = audio.createGain();
+  const f = 1500 / Math.sqrt(r);
+  o.type = 'sine';
+  o.frequency.setValueAtTime(f * 0.6, t);
+  o.frequency.exponentialRampToValueAtTime(f * 1.6, t + 0.07);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  o.connect(g).connect(audio.destination);
+  o.start(t); o.stop(t + 0.2);
+}
+function chord(up) {
+  if (!audio) return;
+  const notes = up ? [523, 659, 784, 1047] : [392, 330, 262];
+  notes.forEach((f, i) => {
+    const t = audio.currentTime + i * 0.09;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o.connect(g).connect(audio.destination);
+    o.start(t); o.stop(t + 0.45);
+  });
+}
+function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+
+// ---------- Level flow ----------
+function makeDrop(x, y, r) {
+  return { x, y, r, vx: 0, vy: 0, ex: 0, ey: 0, evx: 0, evy: 0, fall: null, cool: 0, splitCool: 0 };
+}
+
+function loadDrops() {
+  drops = level.drops.map(([x, y, r]) => makeDrop(x, y, r));
+  V0 = drops.reduce((s, d) => s + vol(d), 0);
+  remaining = 1;
+}
+
+function startLevel(i) {
+  levelIndex = i; level = LEVELS[i];
+  loadDrops();
+  splashes = []; pending = [];
+  time = 0; failTimer = 0; failReason = '';
+  state = 'play';
+  calibrate();
+  $('menu').hidden = true; $('result').hidden = true;
+  setHudLevel();
+  updateHud();
+  renderBg();
+}
+
+function setHudLevel() {
+  $('hud-level').textContent = 'Taso ' + (levelIndex + 1);
+  $('hud-name').textContent = level.name;
+  $('meter-need').textContent = pct(need());
+  $('meter-mark').style.left = `calc(${need() * 100}% - 1px)`;
+}
+
+function fmt(t) { return t.toFixed(1).replace('.', ',') + ' s'; }
+
+function win(kept) {
+  state = 'won';
+  const key = String(levelIndex + 1);
+  const goals = [
+    [true, 'Taso läpäisty'],
+    [kept >= 0.95, 'Vettä säilyi vähintään 95 %'],
+    [time <= level.par, 'Aika enintään ' + fmt(level.par)],
+  ];
+  const n = goals.filter(g => g[0]).length;
+  const prevBest = progress.best[key];
+  const isBest = prevBest == null || time < prevBest;
+  if (isBest) progress.best[key] = time;
+  progress.stars[key] = Math.max(progress.stars[key] || 0, n);
+  progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, levelIndex + 2));
+  save();
+  chord(true); buzz([20, 40, 30]);
+
+  const last = levelIndex === LEVELS.length - 1;
+  $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
+  $('res-title').textContent = last ? 'Kaikki tasot läpäisty!' : 'Yksi pisara!';
+  $('res-facts').innerHTML =
+    `<div><b>${pct(kept)}</b><span>vettä jäljellä (raja ${pct(need())})</span></div>` +
+    `<div><b>${fmt(time)}</b><span>${isBest ? 'uusi ennätys' : 'ennätys ' + fmt(prevBest)}</span></div>`;
+  $('res-stars').innerHTML = goals.map(([ok, label]) => `<div class="star-row${ok ? '' : ' off'}"><i>★</i>${label}</div>`).join('');
+  $('res-stars').hidden = false;
+  setActions(last
+    ? [['Pelaa uudelleen', () => startLevel(levelIndex), true], ['Tasot', openMenu]]
+    : [['Seuraava taso', () => startLevel(levelIndex + 1), true], ['Uudelleen', () => startLevel(levelIndex)], ['Tasot', openMenu]]);
+  setTimeout(() => { if (state === 'won') $('result').hidden = false; }, 700);
+}
+
+function fail() {
+  state = 'failed';
+  chord(false); buzz(120);
+  $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
+  $('res-title').textContent = 'Liikaa vettä menetetty';
+  const why = failReason === 'drain'
+    ? 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.'
+    : 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.';
+  $('res-facts').innerHTML =
+    `<div><b>${pct(Math.max(0, remaining))}</b><span>vettä jäljellä</span></div>` +
+    `<div><b>${pct(need())}</b><span>vaaditaan</span></div>` +
+    `<p>${why}</p>`;
+  $('res-stars').hidden = true;
+  setActions([['Yritä uudelleen', () => startLevel(levelIndex), true], ['Tasot', openMenu]]);
+  $('result').hidden = false;
+}
+
+function setActions(list) {
+  const row = $('res-actions'); row.innerHTML = '';
+  list.forEach(([label, fn, primary]) => {
+    const b = document.createElement('button');
+    b.className = 'btn' + (primary ? ' primary' : '');
+    b.textContent = label; b.addEventListener('click', () => { unlockAudio(); fn(); });
+    row.appendChild(b);
+  });
+  const first = row.querySelector('.primary');
+  if (first) setTimeout(() => first.focus({ preventScroll: true }), 750);
+}
+
+function openMenu() {
+  if (state === 'play') state = 'paused';
+  buildGrid();
+  $('result').hidden = true; $('menu').hidden = false;
+  $('btn-play').textContent = state === 'paused' ? 'Jatka' : 'Pelaa';
+}
+
+function buildGrid() {
+  const g = $('level-grid'); g.innerHTML = '';
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'lvl' + (i === levelIndex ? ' current' : '');
+    b.disabled = i + 1 > progress.unlocked;
+    const st = progress.stars[String(i + 1)] || 0;
+    b.innerHTML = `${i + 1}<small>${st ? '★'.repeat(st) : '&nbsp;'}</small>`;
+    b.setAttribute('aria-label', `Taso ${i + 1}: ${L.name}, saa menettää ${Math.round(L.maxLoss * 100)} % vedestä${b.disabled ? ', lukittu' : ''}`);
+    b.addEventListener('click', () => begin(i));
+    g.appendChild(b);
+  });
+}
+
+let askedSensor = false;
+async function begin(i) {
+  unlockAudio();
+  if (!askedSensor) {
+    askedSensor = true;
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        await DeviceOrientationEvent.requestPermission();
+      }
+    } catch (e) {}
+    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(() => {}); } catch (e) {}
+    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+    setTimeout(() => {
+      if (sensor.ok) return;
+      const touch = matchMedia('(pointer: coarse)').matches;
+      showToast(touch
+        ? 'Kallistus ei ole käytössä tässä näkymässä. Ohjaa painamalla ruutua siihen suuntaan, johon haluat kallistaa.'
+        : 'Ohjaa nuolinäppäimillä tai painamalla hiirellä ruutua kallistuksen suuntaan.', 6000);
+    }, 1200);
+  }
+  startLevel(i);
+}
+
+$('btn-play').addEventListener('click', () => {
+  if (state === 'paused') { state = 'play'; $('menu').hidden = true; calibrate(); return; }
+  begin(Math.min(progress.unlocked, LEVELS.length) - 1);
+});
+$('btn-menu').addEventListener('click', openMenu);
+$('btn-restart').addEventListener('click', () => { unlockAudio(); if (state !== 'menu') startLevel(levelIndex); });
+
+let toastTimer = 0;
+function showToast(text, ms) {
+  const t = $('toast'); t.textContent = text; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, ms);
+}
+function hideToast() { $('toast').hidden = true; }
+
+function updateHud() {
+  const n = drops.filter(d => !d.fall && d.r >= EVAP_R).length;
+  $('hud-count').textContent = n + (n === 1 ? ' pisara' : ' pisaraa');
+  $('hud-time').textContent = fmt(time);
+  const r = Math.max(0, remaining);
+  $('meter-value').textContent = pct(r);
+  $('meter-fill').style.width = (r * 100).toFixed(1) + '%';
+  $('meter-fill').classList.toggle('low', r < need() + 0.05);
+  $('meter').setAttribute('aria-valuenow', Math.round(r * 100));
+}
+
+// ---------- Physics ----------
+// Deformation lives in "doubled-angle" space: (ex, ey) = amount·(cos 2θ, sin 2θ), stretch along θ.
+// Each drop rings like a damped spring; smaller drops ring faster, as real ones do.
+function ringFreq(r) { return 70 / Math.pow(r, 0.75); }
+
+function hit(d, nx, ny) {
+  const vn = d.vx * nx + d.vy * ny;
+  if (vn >= 0) return;
+  const impact = -vn;
+  d.vx -= (1 + RESTITUTION) * vn * nx; d.vy -= (1 + RESTITUTION) * vn * ny;
+  // squash flat against the surface
+  const a2 = 2 * Math.atan2(ny, nx);
+  const kick = impact * 0.1;
+  d.evx -= Math.cos(a2) * kick; d.evy -= Math.sin(a2) * kick;
+  if (impact > 28) buzz(Math.min(25, impact / 5));
+  if (impact > SPLIT_SPEED && d.r > 2.6 && d.splitCool <= 0) split(d, nx, ny, impact);
+}
+
+// a hard impact tears a small droplet off the rim
+function split(d, nx, ny, impact) {
+  const V = vol(d);
+  const frac = 0.06 + Math.random() * 0.05;
+  const fr = Math.cbrt(V * frac);
+  d.r = Math.cbrt(V * (1 - frac));
+  d.splitCool = 0.35;
+  const sgn = Math.random() < 0.5 ? -1 : 1;
+  const tx = -ny * sgn, ty = nx * sgn;
+  const f = makeDrop(d.x + tx * (d.r + fr + 0.2) + nx * fr * 0.5, d.y + ty * (d.r + fr + 0.2) + ny * fr * 0.5, fr);
+  f.vx = d.vx * 0.6 + tx * impact * 0.45 + nx * impact * 0.25;
+  f.vy = d.vy * 0.6 + ty * impact * 0.45 + ny * impact * 0.25;
+  f.cool = 0.4;
+  pending.push(f);
+  for (let i = 0; i < 5; i++) {
+    const a = Math.atan2(ny, nx) + (Math.random() - 0.5) * 2.2, v = 20 + Math.random() * 30;
+    splashes.push({ x: d.x - nx * d.r, y: d.y - ny * d.r, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 0.3 + Math.random() * 0.4, life: 0.3 + Math.random() * 0.2 });
+  }
+  plip(fr * 2, 0.06);
+}
+
+function collideWalls(d) {
+  // leaf edges
+  if (d.x < d.r) { d.x = d.r; hit(d, 1, 0); }
+  if (d.x > W - d.r) { d.x = W - d.r; hit(d, -1, 0); }
+  if (d.y < d.r) { d.y = d.r; hit(d, 0, 1); }
+  if (d.y > H - d.r) { d.y = H - d.r; hit(d, 0, -1); }
+  // raised ridges
+  for (const [wx, wy, ww, wh] of (level.walls || [])) {
+    const cx = Math.max(wx, Math.min(d.x, wx + ww));
+    const cy = Math.max(wy, Math.min(d.y, wy + wh));
+    const dx = d.x - cx, dy = d.y - cy;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= d.r * d.r) continue;
+    let nx, ny;
+    if (d2 > 1e-9) {
+      const dist = Math.sqrt(d2); nx = dx / dist; ny = dy / dist;
+      d.x = cx + nx * d.r; d.y = cy + ny * d.r;
+    } else {
+      // centre inside the ridge: push out along the shallowest side
+      const opts = [[d.x - wx, -1, 0], [wx + ww - d.x, 1, 0], [d.y - wy, 0, -1], [wy + wh - d.y, 0, 1]].sort((a, b) => a[0] - b[0]);
+      [, nx, ny] = opts[0];
+      if (nx) d.x = (nx < 0 ? wx : wx + ww) + nx * d.r; else d.y = (ny < 0 ? wy : wy + wh) + ny * d.r;
+    }
+    hit(d, nx, ny);
+  }
+}
+
+function step(dt) {
+  const ax = tilt.x * GRAVITY, ay = tilt.y * GRAVITY;
+  const amag = Math.hypot(ax, ay);
+
+  for (const d of drops) {
+    if (d.fall) {
+      // swirl into the hole and drain away
+      const [hx, hy] = d.fall;
+      d.x += (hx - d.x) * Math.min(1, dt * 10);
+      d.y += (hy - d.y) * Math.min(1, dt * 10);
+      d.r = Math.max(0, d.r - dt * 9);
+      continue;
+    }
+    d.cool = Math.max(0, d.cool - dt);
+    d.splitCool = Math.max(0, d.splitCool - dt);
+
+    // tiny splash droplets evaporate
+    if (d.r < EVAP_R) d.r -= EVAP_RATE * dt;
+
+    let fx = ax, fy = ay;
+    for (const [hx, hy, hr] of (level.drains || [])) {
+      if (d.r >= hr) continue;                 // too big to fall through: rolls over the hole
+      const dx = hx - d.x, dy = hy - d.y, dist = Math.hypot(dx, dy);
+      const reach = hr + d.r * 0.8;
+      if (dist < hr * 0.55) { d.fall = [hx, hy]; d.vx = d.vy = 0; failReason = 'drain'; plip(d.r * 1.8, 0.08); buzz(60); break; }
+      if (dist < reach) { const pull = 320 * (1 - dist / reach); fx += dx / dist * pull; fy += dy / dist * pull; }
+    }
+    if (d.fall) continue;
+
+    const speed = Math.hypot(d.vx, d.vy);
+    const grip = STICK / d.r;
+    const pinned = speed < 1.2 && Math.hypot(fx, fy) < grip && amag < grip;
+    if (pinned) { d.vx = 0; d.vy = 0; }
+    else {
+      d.vx += fx * dt; d.vy += fy * dt;
+      // viscous drag is relatively stronger for small drops
+      const k = Math.exp(-(0.9 + 3 / d.r) * dt);
+      d.vx *= k; d.vy *= k;
+      const sp = Math.hypot(d.vx, d.vy);
+      if (sp > MAX_SPEED) { d.vx *= MAX_SPEED / sp; d.vy *= MAX_SPEED / sp; }
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      collideWalls(d);
+    }
+
+    // shape: rolling drops elongate slightly along their path, then wobble back
+    const sp = Math.hypot(d.vx, d.vy);
+    const m = Math.min(sp / 450, 0.16), a2 = 2 * Math.atan2(d.vy, d.vx);
+    const tx = m * Math.cos(a2), ty = m * Math.sin(a2);
+    const w = ringFreq(d.r), c = 2 * 0.13 * w;
+    d.evx += (-w * w * (d.ex - tx) - c * d.evx) * dt;
+    d.evy += (-w * w * (d.ey - ty) - c * d.evy) * dt;
+    d.ex += d.evx * dt; d.ey += d.evy * dt;
+    const e = Math.hypot(d.ex, d.ey);
+    if (e > 0.42) { d.ex *= 0.42 / e; d.ey *= 0.42 / e; }
+  }
+  if (pending.length) { drops.push(...pending); pending = []; }
+
+  // merging: touching drops coalesce, volume and momentum preserved
+  let merged = true;
+  while (merged) {
+    merged = false;
+    outer: for (let i = 0; i < drops.length; i++) {
+      const a = drops[i]; if (a.fall) continue;
+      for (let j = i + 1; j < drops.length; j++) {
+        const b = drops[j]; if (b.fall || a.cool > 0 || b.cool > 0) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        if (Math.hypot(dx, dy) < a.r + b.r) {
+          const ma = vol(a), mb = vol(b), m = ma + mb;
+          a.x = (a.x * ma + b.x * mb) / m; a.y = (a.y * ma + b.y * mb) / m;
+          a.vx = (a.vx * ma + b.vx * mb) / m; a.vy = (a.vy * ma + b.vy * mb) / m;
+          a.r = Math.cbrt(m);
+          // the fresh drop starts stretched along the line that joined them and rings
+          const share = Math.min(ma, mb) / m;
+          const a2 = 2 * Math.atan2(dy, dx), amt = 0.12 + share * 0.5;
+          a.ex += Math.cos(a2) * amt; a.ey += Math.sin(a2) * amt;
+          a.evx = a.evx * ma / m + b.evx * mb / m; a.evy = a.evy * ma / m + b.evy * mb / m;
+          a.cool = 0; a.splitCool = 0.2;
+          drops.splice(j, 1);
+          collideWalls(a);
+          spawnSplash(a, share);
+          plip(a.r); buzz(12);
+          merged = true;
+          break outer;
+        }
+      }
+    }
+  }
+
+  for (const s of splashes) { s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.9; s.vy *= 0.9; s.life -= dt; }
+  splashes = splashes.filter(s => s.life > 0);
+
+  drops = drops.filter(d => d.fall ? d.r > 0.15 : d.r > 0.35);
+
+  const alive = drops.filter(d => !d.fall);
+  remaining = alive.reduce((s, d) => s + vol(d), 0) / V0;
+
+  if (state === 'play') {
+    if (remaining < need() - 1e-6) {
+      state = 'failing';
+      if (!drops.some(d => d.fall)) failReason = 'evap';
+    } else {
+      const big = alive.filter(d => d.r >= EVAP_R);
+      const falling = drops.some(d => d.fall);
+      if (big.length === 1 && !falling) {
+        const kept = vol(big[0]) / V0;   // splash droplets still on the leaf count as lost
+        if (kept >= need() - 1e-6) win(kept);
+      }
+    }
+  } else if (state === 'failing') {
+    failTimer += dt;
+    if (failTimer > 0.8) fail();
+  }
+}
+
+function spawnSplash(d, share) {
+  const n = 4 + Math.round(share * 10);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = 14 + Math.random() * 22;
+    splashes.push({ x: d.x + Math.cos(a) * d.r * 0.9, y: d.y + Math.sin(a) * d.r * 0.9, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 0.25 + Math.random() * 0.45, life: 0.25 + Math.random() * 0.2 });
+  }
+}
+
+// ---------- Rendering ----------
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = window.innerWidth, h = window.innerHeight;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const top = $('hud').getBoundingClientRect().bottom + 6;
+  const s = Math.min((w - 24) / W, (h - top - 18) / H);
+  view = { w, h, dpr, s, ox: (w - W * s) / 2, oy: top + Math.max(0, (h - top - 12 - H * s) / 2) };
+  renderBg();
+}
+
+function rng(seed) { let x = seed * 9301 + 49297; return () => { x = (x * 9301 + 49297) % 233280; return x / 233280; }; }
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+
+function renderBg() {
+  const { w, h, dpr, s, ox, oy } = view;
+  bg.width = cv.width; bg.height = cv.height;
+  const c = bgx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // pond
+  const pg = c.createLinearGradient(0, 0, 0, h);
+  pg.addColorStop(0, '#0e2f31'); pg.addColorStop(1, '#081b1e');
+  c.fillStyle = pg; c.fillRect(0, 0, w, h);
+  const rnd = rng(levelIndex + 7);
+  c.strokeStyle = 'rgba(160, 220, 210, 0.05)'; c.lineWidth = 1;
+  for (let i = 0; i < 14; i++) {
+    const x = rnd() * w, y = rnd() * h, r = 20 + rnd() * 70;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.35, 0, 0, Math.PI * 2); c.stroke();
+  }
+
+  // leaf, in field units
+  c.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * oy);
+  c.save();
+  c.shadowColor = 'rgba(0, 0, 0, 0.45)'; c.shadowBlur = 18 * dpr; c.shadowOffsetY = 4 * dpr;
+  roundRect(c, -2, -2, W + 4, H + 4, 9);
+  c.fillStyle = '#2f6a2e'; c.fill();
+  c.restore();
+
+  c.save();
+  roundRect(c, 0, 0, W, H, 7.5); c.clip();
+  const lg = c.createRadialGradient(W * 0.45, H * 0.42, 4, W / 2, H / 2, H * 0.75);
+  lg.addColorStop(0, '#6aa652'); lg.addColorStop(0.55, '#4f8c41'); lg.addColorStop(1, '#2c5f2c');
+  c.fillStyle = lg; c.fillRect(0, 0, W, H);
+
+  // veins radiating from the stem point, with finer side veins
+  const vx = W * 0.5, vy = H * 0.5;
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + rnd() * 0.08;
+    const len = 130;
+    const ex = vx + Math.cos(a) * len, ey = vy + Math.sin(a) * len;
+    const bend = (rnd() - 0.5) * 18;
+    c.beginPath(); c.moveTo(vx, vy);
+    c.quadraticCurveTo(vx + Math.cos(a) * len * 0.5 - Math.sin(a) * bend, vy + Math.sin(a) * len * 0.5 + Math.cos(a) * bend, ex, ey);
+    c.strokeStyle = 'rgba(214, 245, 190, 0.14)'; c.lineWidth = 0.9; c.stroke();
+    c.strokeStyle = 'rgba(20, 60, 20, 0.18)'; c.lineWidth = 0.35;
+    c.save(); c.translate(0.6, 0.6); c.stroke(); c.restore();
+    for (let k = 1; k < 6; k++) {
+      const t = k / 6 * 0.9, bx = vx + Math.cos(a) * len * t * 0.7, by = vy + Math.sin(a) * len * t * 0.7;
+      const side = a + (k % 2 ? 0.9 : -0.9), sl = 6 + rnd() * 8;
+      c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + Math.cos(side) * sl, by + Math.sin(side) * sl);
+      c.strokeStyle = 'rgba(214, 245, 190, 0.06)'; c.lineWidth = 0.35; c.stroke();
+    }
+  }
+  c.beginPath(); c.arc(vx, vy, 2.2, 0, Math.PI * 2); c.fillStyle = 'rgba(214, 245, 190, 0.18)'; c.fill();
+
+  // waxy micro-texture of a lotus leaf
+  for (let i = 0; i < 1400; i++) {
+    c.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(10,40,10,0.07)';
+    c.fillRect(rnd() * W, rnd() * H, 0.35, 0.35);
+  }
+
+  // holes
+  for (const [hx, hy, hr] of (level.drains || [])) {
+    c.beginPath();
+    const pts = 28;
+    for (let i = 0; i <= pts; i++) {
+      const a = (i / pts) * Math.PI * 2;
+      const rr = hr * (0.92 + rnd() * 0.16);
+      const px = hx + Math.cos(a) * rr, py = hy + Math.sin(a) * rr;
+      i ? c.lineTo(px, py) : c.moveTo(px, py);
+    }
+    c.closePath();
+    c.save();
+    c.strokeStyle = 'rgba(150, 120, 50, 0.55)'; c.lineWidth = 1.4; c.stroke();
+    const hg = c.createRadialGradient(hx - hr * 0.2, hy - hr * 0.2, 0, hx, hy, hr);
+    hg.addColorStop(0, '#0f3438'); hg.addColorStop(1, '#05161a');
+    c.fillStyle = hg; c.fill();
+    c.clip();
+    c.strokeStyle = 'rgba(160, 220, 210, 0.12)'; c.lineWidth = 0.3;
+    c.beginPath(); c.ellipse(hx + hr * 0.15, hy + hr * 0.2, hr * 0.5, hr * 0.18, -0.3, 0, Math.PI * 2); c.stroke();
+    c.restore();
+  }
+
+  // raised ridges
+  for (const [wx, wy, ww, wh] of (level.walls || [])) {
+    c.save();
+    c.shadowColor = 'rgba(10, 35, 10, 0.5)'; c.shadowBlur = 3 * dpr * s / 4; c.shadowOffsetY = 0.8 * dpr * s / 4;
+    roundRect(c, wx, wy, ww, wh, Math.min(ww, wh) / 2);
+    const rg = c.createLinearGradient(wx, wy, wx + (ww < wh ? ww : 0), wy + (ww < wh ? 0 : wh));
+    rg.addColorStop(0, '#8cc26e'); rg.addColorStop(0.45, '#4b8a3c'); rg.addColorStop(1, '#2a5a29');
+    c.fillStyle = rg; c.fill();
+    c.restore();
+    roundRect(c, wx, wy, ww, wh, Math.min(ww, wh) / 2);
+    c.strokeStyle = 'rgba(220, 250, 200, 0.18)'; c.lineWidth = 0.3; c.stroke();
+  }
+  c.restore();
+}
+
+// screen-space shape transform for a drop's current deformation
+function shape(c, d, cx, cy) {
+  const e = Math.hypot(d.ex, d.ey);
+  const axis = Math.atan2(d.ey, d.ex) / 2, k = 1 + e;
+  c.translate(cx, cy);
+  c.rotate(axis); c.scale(k, 1 / k); c.rotate(-axis);
+}
+
+// light from the upper left: a soft shadow on the leaf, with the bright caustic the drop focuses into it
+function drawShadow(c, d) {
+  const { s, ox, oy } = view;
+  const R = d.r * s, cx = ox + d.x * s, cy = oy + d.y * s;
+  c.save();
+  shape(c, d, cx + R * 0.34, cy + R * 0.46);
+  const g = c.createRadialGradient(0, 0, 0, 0, 0, R * 1.08);
+  g.addColorStop(0, 'rgba(6, 28, 8, 0.10)');
+  g.addColorStop(0.55, 'rgba(6, 28, 8, 0.40)');
+  g.addColorStop(0.85, 'rgba(6, 28, 8, 0.22)');
+  g.addColorStop(1, 'rgba(6, 28, 8, 0)');
+  c.fillStyle = g;
+  c.beginPath(); c.arc(0, 0, R * 1.08, 0, Math.PI * 2); c.fill();
+  const cg = c.createRadialGradient(-R * 0.06, -R * 0.08, 0, -R * 0.06, -R * 0.08, R * 0.5);
+  cg.addColorStop(0, 'rgba(255, 252, 215, 0.55)');
+  cg.addColorStop(1, 'rgba(255, 252, 215, 0)');
+  c.fillStyle = cg;
+  c.beginPath(); c.arc(-R * 0.06, -R * 0.08, R * 0.5, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+
+function drawDrop(c, d) {
+  const { s, ox, oy, dpr } = view;
+  const R = d.r * s, cx = ox + d.x * s, cy = oy + d.y * s;
+  if (R < 0.3) return;
+  c.save();
+  shape(c, d, cx, cy);
+  c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2);
+  c.save(); c.clip();
+
+  // refraction: a water bead is a ball lens, so it shows the leaf behind it shrunk and upside down
+  const src = R * 1.7;
+  let sw = src * 2 * dpr, sx = (cx - src) * dpr, sy = (cy - src) * dpr;
+  sx = Math.max(0, Math.min(bg.width - sw, sx)); sy = Math.max(0, Math.min(bg.height - sw, sy));
+  c.save(); c.scale(-1, -1);
+  if (sw > 1 && sw <= bg.width && sw <= bg.height) c.drawImage(bg, sx, sy, sw, sw, -R, -R, R * 2, R * 2);
+  c.restore();
+
+  c.fillStyle = 'rgba(215, 240, 255, 0.10)'; c.fillRect(-R, -R, R * 2, R * 2);
+  // transmitted light pooling on the side away from the sun
+  const tg = c.createRadialGradient(R * 0.32, R * 0.4, 0, R * 0.32, R * 0.4, R * 0.75);
+  tg.addColorStop(0, 'rgba(240, 255, 225, 0.38)'); tg.addColorStop(1, 'rgba(240, 255, 225, 0)');
+  c.fillStyle = tg; c.fillRect(-R, -R, R * 2, R * 2);
+  // dark rim from total internal reflection: what makes it read as a sphere
+  const rg = c.createRadialGradient(0, 0, R * 0.45, 0, 0, R);
+  rg.addColorStop(0, 'rgba(8, 35, 22, 0)');
+  rg.addColorStop(0.78, 'rgba(8, 35, 22, 0.22)');
+  rg.addColorStop(1, 'rgba(8, 35, 22, 0.72)');
+  c.fillStyle = rg; c.fillRect(-R, -R, R * 2, R * 2);
+  // reflection of the sky along the upper-left rim
+  c.beginPath(); c.arc(0, 0, R * 0.9, Math.PI * 1.02, Math.PI * 1.62);
+  c.strokeStyle = 'rgba(220, 245, 255, 0.32)'; c.lineWidth = R * 0.12; c.lineCap = 'round'; c.stroke();
+  c.restore();
+
+  c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2);
+  c.strokeStyle = 'rgba(8, 35, 22, 0.5)'; c.lineWidth = Math.max(0.6, R * 0.035); c.stroke();
+
+  // specular highlight of the sun
+  const hx = -R * 0.38, hy = -R * 0.42;
+  const hg = c.createRadialGradient(hx, hy, 0, hx, hy, R * 0.32);
+  hg.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  hg.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)');
+  hg.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  c.fillStyle = hg;
+  c.beginPath(); c.ellipse(hx, hy, R * 0.32, R * 0.22, -0.65, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(hx + R * 0.02, hy + R * 0.01, Math.max(0.6, R * 0.07), 0, Math.PI * 2);
+  c.fillStyle = '#fff'; c.fill();
+  c.restore();
+}
+
+function drawBubble() {
+  const c = bctx, s = bubbleCv.width, m = s / 2;
+  c.clearRect(0, 0, s, s);
+  c.beginPath(); c.arc(m, m, m - 3, 0, Math.PI * 2);
+  c.fillStyle = 'rgba(200, 235, 120, 0.22)'; c.fill();
+  c.strokeStyle = 'rgba(230, 245, 220, 0.45)'; c.lineWidth = 2; c.stroke();
+  c.beginPath(); c.arc(m, m, m * 0.36, 0, Math.PI * 2);
+  c.strokeStyle = 'rgba(230, 245, 220, 0.35)'; c.lineWidth = 1.5; c.stroke();
+  // a spirit-level bubble floats uphill, opposite to where the drops roll
+  const bx = m - tilt.x * (m - 14), by = m - tilt.y * (m - 14);
+  c.beginPath(); c.arc(bx, by, 10, 0, Math.PI * 2);
+  c.fillStyle = 'rgba(250, 255, 240, 0.9)'; c.fill();
+}
+
+function draw() {
+  const { dpr, s, ox, oy } = view;
+  if (!bg.width || !bg.height) { if (window.innerWidth && window.innerHeight) resize(); return; }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(bg, 0, 0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  for (const d of drops) {
+    ctx.globalAlpha = d.fall ? Math.min(1, d.r / 2) : d.r < EVAP_R ? Math.min(1, d.r / EVAP_R + 0.2) : 1;
+    drawShadow(ctx, d);
+  }
+  for (const d of drops) {
+    ctx.globalAlpha = d.fall ? Math.min(1, d.r / 2) : d.r < EVAP_R ? Math.min(1, d.r / EVAP_R + 0.2) : 1;
+    drawDrop(ctx, d);
+  }
+  for (const p of splashes) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2.5));
+    const px = ox + p.x * s, py = oy + p.y * s, pr = Math.max(0.8, p.r * s);
+    ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(200, 235, 245, 0.55)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(px - pr * 0.35, py - pr * 0.35, pr * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  if (pointer.active && (state === 'play' || state === 'failing')) {
+    const cx = ox + W * s / 2, cy = oy + H * s / 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(pointer.sx, pointer.sy);
+    ctx.strokeStyle = 'rgba(244, 201, 93, 0.35)'; ctx.lineWidth = 2; ctx.setLineDash([4, 6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(pointer.sx, pointer.sy, 18, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(244, 201, 93, 0.55)'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  drawBubble();
+}
+
+// ---------- Loop ----------
+let last = performance.now(), acc = 0, hudTick = 0;
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  const target = readTilt();
+  tilt.x += (target.x - tilt.x) * Math.min(1, dt * 14);
+  tilt.y += (target.y - tilt.y) * Math.min(1, dt * 14);
+  if (state === 'play' || state === 'failing' || state === 'won') {
+    acc += dt;
+    while (acc >= STEP) { step(STEP); acc -= STEP; }
+    if (state === 'play') time += dt;
+    hudTick += dt;
+    if (hudTick > 0.1) { hudTick = 0; updateHud(); }
+  } else {
+    acc = 0;
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+// ---------- Boot ----------
+function start(data) {
+  data = data || {};
+  levelIndex = Math.max(0, Math.min(LEVELS.length - 1, data.level != null ? data.level : progress.unlocked - 1));
+  level = LEVELS[levelIndex];
+  loadDrops();
+  setHudLevel();
+  updateHud();
+  buildGrid();
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(frame);
+}
+
+if (window.claude && window.claude.hot && window.claude.hot.snapshot) {
+  window.claude.hot.snapshot(() => ({ level: levelIndex }));
+}
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start);
+else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
+</body>
+</html>
