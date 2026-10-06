@@ -156,7 +156,6 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
       <li><b>Näppäimistö:</b> nuolinäppäimet, R aloittaa alusta.</li>
       <li><b>Reiät:</b> reikää pienempi pisara putoaa läpi ja sen vesi menetetään. Isompi pisara vierii yli.</li>
       <li><b>Roiskeet:</b> kova törmäys irrottaa pikkupisaroita, jotka haihtuvat, ellet kerää niitä.</li>
-      <li><b>Tason 10 jälkeen</b> lehden reunaan tulee aukkoja, etenkin kulmiin. Aukko näkyy tummana kohtana, ja pisara voi valua siitä lampeen. Lisäksi vastaan tulee kohoumia, aurinkoläikkiä ja sammalta.</li>
     </ul>
     <p class="eyebrow">Maailmat</p>
     <div class="worlds" id="world-tabs"></div>
@@ -182,7 +181,6 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 // drops: [x, y, r]   walls: [x, y, w, h]   drains: [x, y, r]   rocks (bumps): [x, y, r]
 // suns (evaporate water): [x, y, r]   moss (slows drops): [x, y, w, h]
 // maxLoss: share of the water that may be lost and still pass   par: seconds for the time star
-// tip: shown once when the level starts, to introduce a new element
 // gaps: openings in the leaf's rim where drops roll off into the pond: [side, from, to], side 'l' 'r' 't' 'b'.
 //   Default (see makeGaps): none in Kaste, then open corners first and gaps along the sides later.
 const R = (r, list) => list.map(([x, y]) => [x, y, r]);
@@ -209,7 +207,7 @@ const PISARA_LEVELS = [
     drops: [[10, 10, 3], [90, 10, 3], [50, 62, 3], [30, 80, 3], [70, 80, 3], [50, 150, 3], [10, 122, 3], [90, 122, 3]] },
 
   // ----- Sadekuuro: bumps in the leaf -----
-  { name: 'Kohoumat', maxLoss: 0.25, par: 25, tip: 'Uutta: lehden reunassa on aukkoja, varsinkin kulmissa. Aukon kohdalla pisara valuu lampeen. Lisäksi pisarat kimpoavat pyöreistä kohoumista.',
+  { name: 'Kohoumat', maxLoss: 0.25, par: 25,
     rocks: [[30, 60, 7], [70, 60, 7], [50, 100, 8]],
     drops: R(4, [[15, 20], [85, 20], [50, 40], [20, 130], [80, 130], [50, 145]]) },
   { name: 'Kaksi huonetta', maxLoss: 0.25, par: 25, walls: [[0, 78, 42, 5], [58, 78, 42, 5]],
@@ -234,14 +232,14 @@ const PISARA_LEVELS = [
     drops: R(3.5, [[15, 15], [85, 15], [30, 35], [70, 35], [30, 80], [70, 80], [15, 140], [85, 140], [30, 125], [70, 125]]) },
 
   // ----- Helle: sun spots evaporate water -----
-  { name: 'Auringonläikkä', maxLoss: 0.3, par: 15, tip: 'Uutta: aurinkoläikät. Kirkkaassa auringossa pisara haihtuu, joten kierrä tai ylitä nopeasti.',
+  { name: 'Auringonläikkä', maxLoss: 0.3, par: 15,
     suns: [[50, 80, 14]], drops: R(4.5, [[20, 30], [80, 30], [50, 140]]) },
   { name: 'Kaksi läikkää', maxLoss: 0.28, par: 20, suns: [[30, 55, 12], [70, 105, 12]],
     drops: R(4, [[80, 30], [20, 130], [50, 80], [15, 15]]) },
   { name: 'Varjokäytävä', maxLoss: 0.28, par: 25, walls: [[0, 78, 60, 5]], suns: [[80, 80, 10]],
     drops: R(4, [[20, 30], [50, 40], [80, 25], [30, 130], [75, 130]]) },
   { name: 'Paahde', maxLoss: 0.25, par: 30, suns: [[50, 80, 22]],
-    drops: R(4, [[10, 15], [90, 15], [10, 145], [90, 145], [10, 80], [90, 80]]) },
+    drops: R(4, [[14, 20], [86, 20], [14, 140], [86, 140], [10, 80], [90, 80]]) },
   { name: 'Paahde ja reiät', maxLoss: 0.25, par: 35, suns: [[50, 40, 10], [50, 120, 10]], drains: [[20, 80, 5], [80, 80, 5]],
     drops: R(3.5, [[15, 15], [85, 15], [15, 145], [85, 145], [50, 80], [30, 100], [70, 60]]) },
   { name: 'Kuuma lattia', maxLoss: 0.25, par: 35, suns: [[25, 40, 7], [75, 40, 7], [50, 80, 7], [25, 120, 7], [75, 120, 7]],
@@ -256,10 +254,10 @@ const PISARA_LEVELS = [
     drops: R(3, [[10, 10], [50, 10], [90, 10], [30, 40], [70, 40], [50, 80], [30, 120], [70, 120], [10, 150], [90, 150]]) },
   { name: 'Helle', maxLoss: 0.22, par: 55, walls: [[35, 78, 30, 5]], drains: [[50, 105, 5], [50, 55, 5]],
     suns: [[50, 30, 9], [20, 80, 9], [80, 80, 9], [50, 130, 9]],
-    drops: R(3.5, [[10, 10], [90, 10], [10, 150], [90, 150], [50, 92], [35, 65], [65, 100]]) },
+    drops: R(3.5, [[13, 14], [87, 14], [13, 146], [87, 146], [50, 92], [35, 65], [65, 100]]) },
 
   // ----- Sammal: moss slows drops down -----
-  { name: 'Pehmeä sammal', maxLoss: 0.22, par: 15, tip: 'Uutta: sammal. Sammaleessa pisara hidastuu ja tarttuu kiinni.',
+  { name: 'Pehmeä sammal', maxLoss: 0.22, par: 15,
     moss: [[0, 60, 100, 40]], drops: R(4.5, [[25, 25], [75, 30], [30, 130], [70, 135]]) },
   { name: 'Sammalsaari', maxLoss: 0.22, par: 25, moss: [[30, 55, 40, 50]],
     drops: R(4, [[15, 20], [85, 20], [15, 140], [85, 140], [50, 80]]) },
@@ -281,7 +279,7 @@ const PISARA_LEVELS = [
     drops: R(3.5, [[15, 15], [85, 15], [20, 80], [80, 80], [15, 145], [85, 145], [50, 80]]) },
   { name: 'Sammal', maxLoss: 0.15, par: 60, walls: [[0, 78, 40, 5], [60, 78, 40, 5]], moss: [[40, 70, 20, 20]],
     drains: [[20, 40, 5], [80, 120, 5]], suns: [[80, 40, 8], [20, 120, 8]],
-    drops: R(3.5, [[10, 10], [50, 15], [90, 10], [50, 55], [10, 150], [50, 145], [90, 150], [50, 105]]) },
+    drops: R(3.5, [[13, 14], [50, 15], [87, 14], [50, 55], [13, 146], [50, 145], [87, 146], [50, 105]]) },
 
   // ----- Ukkonen: everything together -----
   { name: 'Salama', maxLoss: 0.18, par: 50, walls: [[0, 40, 65, 4], [35, 80, 65, 4], [0, 120, 65, 4]],
@@ -291,7 +289,7 @@ const PISARA_LEVELS = [
     drops: R(2.6, [[20, 20], [50, 20], [80, 20], [20, 60], [50, 60], [80, 60], [20, 100], [50, 100], [80, 100], [20, 140], [50, 140], [80, 140]]) },
   { name: 'Ukkospilvi', maxLoss: 0.18, par: 50, suns: [[50, 50, 12], [50, 110, 12]], rocks: [[20, 80, 6], [80, 80, 6]],
     drains: [[50, 80, 5]],
-    drops: R(3.5, [[10, 10], [90, 10], [10, 150], [90, 150], [25, 50], [75, 110], [50, 15], [50, 145]]) },
+    drops: R(3.5, [[13, 14], [87, 14], [13, 146], [87, 146], [25, 50], [75, 110], [50, 15], [50, 145]]) },
   { name: 'Kapea silta', maxLoss: 0.15, par: 45, walls: [[0, 60, 42, 40], [58, 60, 42, 40]], drains: [[50, 80, 4]],
     drops: [...R(3, [[15, 15], [50, 15], [85, 15], [30, 40], [70, 40]]), ...R(3.5, [[20, 130], [50, 145], [80, 130]])] },
   { name: 'Tulvaportit', maxLoss: 0.18, par: 60,
@@ -300,7 +298,7 @@ const PISARA_LEVELS = [
     drops: R(3.5, [[10, 20], [10, 140], [36, 40], [36, 120], [64, 20], [64, 140], [88, 40], [88, 120]]) },
   { name: 'Myrskyn silmä', maxLoss: 0.15, par: 55, drains: [[50, 80, 4]],
     rocks: [[78, 80, 5], [69.8, 99.8, 5], [50, 108, 5], [30.2, 99.8, 5], [22, 80, 5], [30.2, 60.2, 5], [50, 52, 5], [69.8, 60.2, 5]],
-    drops: R(3.5, [[10, 10], [90, 10], [10, 150], [90, 150], [8, 80], [92, 80], [50, 15], [50, 145], [50, 65]]) },
+    drops: R(3.5, [[13, 14], [87, 14], [13, 146], [87, 146], [8, 80], [92, 80], [50, 15], [50, 145], [50, 65]]) },
   { name: 'Tihkusade', maxLoss: 0.15, par: 60, drains: [[30, 62, 4], [70, 95, 4]], suns: [[50, 78, 8], [50, 128, 6]],
     drops: R(2.8, [[15, 12], [50, 12], [85, 12], [15, 45], [50, 45], [85, 45], [15, 78], [85, 78],
                    [15, 111], [50, 111], [85, 111], [15, 144], [50, 144], [85, 144]]) },
@@ -314,7 +312,7 @@ const PISARA_LEVELS = [
     walls: [[20, 40, 60, 4], [0, 80, 30, 4], [70, 80, 30, 4], [20, 120, 60, 4]], rocks: [[50, 80, 6]],
     drains: [[10, 40, 4], [90, 40, 4], [10, 120, 4], [90, 120, 4], [50, 60, 4], [50, 100, 4]],
     suns: [[50, 20, 7], [50, 140, 7]], moss: [[35, 74, 30, 14]],
-    drops: R(3.2, [[10, 10], [90, 10], [50, 8], [30, 60], [70, 60], [30, 100], [70, 100], [10, 150], [90, 150], [50, 152]]) },
+    drops: R(3.2, [[12, 13], [88, 13], [50, 8], [30, 60], [70, 60], [30, 100], [70, 100], [12, 147], [88, 147], [50, 152]]) },
 
   // ----- Lampi: master levels -----
   { name: 'Kaksi maailmaa', maxLoss: 0.12, par: 45, walls: [[0, 78, 44, 4], [60, 78, 40, 4]], drains: [[52, 80, 5]],
@@ -331,7 +329,7 @@ const PISARA_LEVELS = [
                    [12, 105], [37, 105], [63, 105], [88, 105], [12, 145], [37, 145], [63, 145], [88, 145]]) },
   { name: 'Aurinkokello', maxLoss: 0.14, par: 60, rocks: [[50, 50, 5], [50, 110, 5]],
     suns: [[50, 80, 9], [20, 40, 7], [80, 40, 7], [20, 120, 7], [80, 120, 7], [50, 15, 6], [50, 145, 6]],
-    drops: R(3.5, [[10, 80], [90, 80], [35, 80], [65, 80], [10, 10], [90, 10], [10, 150], [90, 150]]) },
+    drops: R(3.5, [[10, 80], [90, 80], [35, 80], [65, 80], [13, 14], [87, 14], [13, 146], [87, 146]]) },
   { name: 'Pullonkaula', maxLoss: 0.1, par: 50, walls: [[0, 70, 44, 6], [56, 70, 44, 6]], drains: [[50, 95, 4.5]],
     drops: [...R(3, [[15, 15], [50, 15], [85, 15], [30, 45], [70, 45]]), ...R(3.5, [[20, 140], [80, 140]])] },
   { name: 'Kaksoislabyrintti', maxLoss: 0.12, par: 70,
@@ -396,6 +394,14 @@ let loss = { drain: 0, evap: 0, sun: 0, edge: 0 };   // volume lost, by cause
 let gaps = [];   // gaps in the leaf's rim: { side: 'l'|'r'|'t'|'b', a, b } along that side
 let V0 = 1, remaining = 1;
 let simMode = false;   // set by the test bot: no UI, no live loop stepping
+let physSeed = 1;      // in test mode the physics randomness is seeded, so a walkthrough replays the same way
+function physRand() {
+  if (!simMode) return Math.random();
+  physSeed = (physSeed + 0x6D2B79F5) | 0;
+  let t = Math.imul(physSeed ^ (physSeed >>> 15), 1 | physSeed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 let view = { w: 0, h: 0, dpr: 1, s: 1, ox: 0, oy: 0 };
 
 const vol = d => d.r * d.r * d.r;
@@ -545,7 +551,7 @@ function makeGaps() {
     const vs = cn[0], hs = cn[1];   // 't'/'b' side runs along x, 'l'/'r' side runs along y
     const ax = hs === 'l' ? [-3, size] : [W - size, W + 3];
     const ay = vs === 't' ? [-3, size] : [H - size, H + 3];
-    if (!clear(vs, ax[0], ax[1], 5) || !clear(hs, ay[0], ay[1], 5)) continue;
+    if (!clear(vs, ax[0], ax[1], 7) || !clear(hs, ay[0], ay[1], 7)) continue;
     out.push({ side: vs, a: ax[0], b: ax[1], corner: cn }, { side: hs, a: ay[0], b: ay[1], corner: cn });
     placed++;
   }
@@ -557,7 +563,7 @@ function makeGaps() {
     const size = 12 + rnd() * 6;
     const a = 10 + rnd() * (len - 20 - size), b = a + size;
     if (out.some(g => g.side === side && a < g.b + 12 && b > g.a - 12)) continue;
-    if (!clear(side, a, b, 10)) continue;
+    if (!clear(side, a, b, 12)) continue;
     out.push({ side, a, b });
     n++;
   }
@@ -577,7 +583,6 @@ function startLevel(i) {
   setHudLevel();
   updateHud();
   renderBg();
-  if (level.tip) showToast(level.tip, 5000);
 }
 
 function setHudLevel() {
@@ -760,11 +765,11 @@ function hit(d, nx, ny) {
 // a hard impact tears a small droplet off the rim
 function split(d, nx, ny, impact) {
   const V = vol(d);
-  const frac = 0.06 + Math.random() * 0.05;
+  const frac = 0.06 + physRand() * 0.05;
   const fr = Math.cbrt(V * frac);
   d.r = Math.cbrt(V * (1 - frac));
   d.splitCool = 0.35;
-  const sgn = Math.random() < 0.5 ? -1 : 1;
+  const sgn = physRand() < 0.5 ? -1 : 1;
   const tx = -ny * sgn, ty = nx * sgn;
   const f = makeDrop(d.x + tx * (d.r + fr + 0.2) + nx * fr * 0.5, d.y + ty * (d.r + fr + 0.2) + ny * fr * 0.5, fr);
   f.vx = d.vx * 0.6 + tx * impact * 0.45 + nx * impact * 0.25;
@@ -1055,7 +1060,7 @@ function renderBg() {
     c.fillRect(rnd() * W, rnd() * H, 0.35, 0.35);
   }
 
-  // rim gaps: the leaf curls down into shadow there, with a thin lit lip at the very edge
+  // rim gaps: the leaf curls down into shadow there
   for (const g of gaps) {
     const depth = 5, a = Math.max(0, g.a), b = Math.min(g.side === 'l' || g.side === 'r' ? H : W, g.b);
     const [ex, ey, nx, ny] = { l: [0, 0, 1, 0], r: [W, 0, -1, 0], t: [0, 0, 0, 1], b: [0, H, 0, -1] }[g.side];
@@ -1063,11 +1068,6 @@ function renderBg() {
     sg.addColorStop(0, 'rgba(8, 28, 12, 0.65)'); sg.addColorStop(1, 'rgba(8, 28, 12, 0)');
     c.fillStyle = sg;
     if (nx) c.fillRect(nx > 0 ? 0 : W - depth, a, depth, b - a); else c.fillRect(a, ny > 0 ? 0 : H - depth, b - a, depth);
-    c.strokeStyle = 'rgba(225, 250, 200, 0.5)'; c.lineWidth = 0.35; c.setLineDash([1.2, 1.6]);
-    c.beginPath();
-    if (nx) { const x = nx > 0 ? 0.25 : W - 0.25; c.moveTo(x, a); c.lineTo(x, b); }
-    else { const y = ny > 0 ? 0.25 : H - 0.25; c.moveTo(a, y); c.lineTo(b, y); }
-    c.stroke(); c.setLineDash([]);
   }
 
   // holes
@@ -1318,7 +1318,7 @@ if (window.PISARA_TEST) {
     count: LEVELS.length,
     load(i) {
       simMode = true;
-      levelIndex = i; level = LEVELS[i];
+      levelIndex = i; level = LEVELS[i]; physSeed = 1000 + i;
       loadDrops();
       splashes = []; pending = [];
       time = 0; failTimer = 0;
@@ -1328,10 +1328,10 @@ if (window.PISARA_TEST) {
       setHudLevel(); renderBg();
       return { level, gaps };
     },
-    snap: () => JSON.stringify({ drops, loss, state, time, failTimer, remaining }),
+    snap: () => JSON.stringify({ drops, loss, state, time, failTimer, remaining, physSeed }),
     restore(s) {
       const o = JSON.parse(s);
-      drops = o.drops; loss = o.loss; state = o.state; time = o.time; failTimer = o.failTimer; remaining = o.remaining;
+      drops = o.drops; loss = o.loss; state = o.state; time = o.time; failTimer = o.failTimer; remaining = o.remaining; physSeed = o.physSeed;
       pending = []; splashes = [];
     },
     // hold a tilt for some seconds of game time
