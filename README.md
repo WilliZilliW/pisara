@@ -4,6 +4,8 @@ Selainpeli, jossa vesipisaroita liikutellaan lotuksenlehdellä puhelinta kallist
 
 **Pelaa:** https://willizilliw.github.io/pisara/
 
+**Android-testiversio:** https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk (uusin main, tehdään automaattisesti jokaisesta mainiin pushatusta muutoksesta)
+
 ## Pelaaminen
 
 - **Puhelin:** kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.

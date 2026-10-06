@@ -4,3 +4,6 @@ Pisara-testi.apk
 _testi.html
 node_modules/
 www/
+
+# test-version signing key (public password "android"); never used for Play releases
+!android/testiavain.keystore

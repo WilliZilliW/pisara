@@ -1,0 +1,62 @@
+# Builds the Android test version (APK) from every push to main and publishes it as the latest GitHub release.
+# Newest APK: https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-release
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build the game for the app (www/)
+        run: |
+          npm ci --ignore-scripts
+          sh tools/sovellus.sh
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug -PpisaraBuild=${{ github.run_number }} --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../Pisara.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=${{ github.run_number }}
+          MSG=$(git log -1 --pretty=%s)
+          gh release create "testi-$N" Pisara.apk \
+            --target "${{ github.sha }}" \
+            --title "Pisara testiversio $N" \
+            --latest \
+            --notes "Testiversio Androidille, tehty mainin uusimmasta muutoksesta: $MSG
+
+          Asennus: lataa Pisara.apk puhelimella ja avaa se. Android kysyy luvan asentaa sovelluksia tästä lähteestä.
+          Uusi testiversio asentuu edellisen päälle, ja edistyminen säilyy."
