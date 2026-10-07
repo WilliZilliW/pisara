@@ -18,7 +18,6 @@ Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee
 
 - `index.html` – koko peli yhdessä tiedostossa (GitHub Pages näyttää tämän).
 - `pisara.html` – sama peli ilman `<html>`/`<head>`-runkoa, Claude-artifaktina julkaisua varten.
-
 - `android/`, `capacitor.config.json` – Android-sovellus (Capacitor 8), joka näyttää pelin `www/`-kansiosta.
 - `assets/` – sovelluskuvakkeiden ja käynnistyskuvan lähdekuvat (piirtää `tools/kuvat.ps1`), `kauppa/` – Play-kaupan kuvat. Puhelimen kuvakaappaukset (`kauppa/kuvakaappaukset/`, 1080 × 2160) otetaan komennolla `sh tools/kuvakaappaukset.sh` (tarvitsee Node.js:n ja Chromen).
 - `tietosuoja.html` – tietosuojaseloste: https://willizilliw.github.io/pisara/tietosuoja.html
