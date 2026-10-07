@@ -13,3 +13,6 @@ android/.idea/
 
 # personal notes and checklists, kept out of the repo
 omat/
+
+# headless Chrome profile used by tools/kuvakaappaukset.mjs
+.chrome-kuvat/
