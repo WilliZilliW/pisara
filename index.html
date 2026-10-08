@@ -79,14 +79,13 @@ body {
 .brand { font-family: var(--display); font-weight: 600; font-size: 56px; line-height: 1; margin: 0; letter-spacing: 0.01em; }
 .brand i { font-style: normal; color: var(--water); }
 .brand-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-/* language switch: quiet text, the current language slightly brighter */
-.lang { display: flex; align-items: center; gap: 2px; font-size: 12px; letter-spacing: 0.08em; color: var(--muted); opacity: 0.7; }
-.lang button {
-  font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0;
-  padding: 6px 4px; cursor: pointer; border-radius: 6px; opacity: 0.6;
+/* language toggle: one quiet button showing the language it switches to */
+.lang {
+  font: 12px var(--body); letter-spacing: 0.1em; color: var(--muted); opacity: 0.6;
+  background: none; border: 0; padding: 6px 4px; border-radius: 6px; cursor: pointer;
 }
-.lang button[aria-pressed="true"] { opacity: 1; color: var(--ink); cursor: default; }
-.lang button:focus-visible { outline: 2px solid var(--sun); outline-offset: 1px; }
+.lang:hover { opacity: 1; }
+.lang:focus-visible { opacity: 1; outline: 2px solid var(--sun); outline-offset: 1px; }
 .lead { margin: 0; color: var(--muted); line-height: 1.5; }
 h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; line-height: 1.1; text-wrap: balance; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; color: var(--muted); margin: 0; }
@@ -169,9 +168,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
   <div class="panel">
     <div class="brand-row">
       <h1 class="brand">Pis<i>a</i>ra</h1>
-      <div class="lang" role="group" id="lang-switch" aria-label="Kieli">
-        <button type="button" id="lang-fi" lang="fi">FI</button><span aria-hidden="true">·</span><button type="button" id="lang-en" lang="en">EN</button>
-      </div>
+      <button type="button" class="lang" id="lang-toggle" lang="en" aria-label="In English">EN</button>
     </div>
     <p class="lead" id="t-lead"></p>
     <ul class="how" id="t-how"></ul>
@@ -412,7 +409,7 @@ const STRINGS = {
     level: n => `Taso ${n}`,
     drops: n => n + (n === 1 ? ' pisara' : ' pisaraa'),
     water: 'Vettä', limit: 'raja', waterAria: 'Vettä jäljellä',
-    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', langAria: 'Kieli',
+    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta',
     lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 60 tasoa kuudessa maailmassa.',
     how: [
       ['Puhelin', 'kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.'],
@@ -442,7 +439,7 @@ const STRINGS = {
     level: n => `Level ${n}`,
     drops: n => n + (n === 1 ? ' drop' : ' drops'),
     water: 'Water', limit: 'limit', waterAria: 'Water left',
-    menuAria: 'Level menu', restartAria: 'Restart level', langAria: 'Language',
+    menuAria: 'Level menu', restartAria: 'Restart level',
     lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 60 levels in six worlds.',
     how: [
       ['Phone', 'tilt it. The way you hold the phone when a level starts counts as flat.'],
@@ -865,13 +862,14 @@ function applyLang() {
   $('t-water').textContent = s.water;
   $('t-limit').textContent = s.limit;
   $('meter').setAttribute('aria-label', s.waterAria);
-  $('lang-switch').setAttribute('aria-label', s.langAria);
+  const other = lang === 'fi' ? 'en' : 'fi';
+  $('lang-toggle').textContent = other.toUpperCase();
+  $('lang-toggle').lang = other;
+  $('lang-toggle').setAttribute('aria-label', other === 'en' ? 'In English' : 'Suomeksi');
   $('t-lead').textContent = s.lead;
   $('t-how').innerHTML = s.how.filter(Boolean).map(([label, text]) => `<li><b>${label}:</b> ${text}</li>`).join('');
   $('t-worlds').textContent = s.worlds;
   $('btn-play').textContent = state === 'paused' ? s.resume : s.play;
-  $('lang-fi').setAttribute('aria-pressed', String(lang === 'fi'));
-  $('lang-en').setAttribute('aria-pressed', String(lang === 'en'));
 }
 function setLang(l) {
   if (l === lang) return;
@@ -882,8 +880,7 @@ function setLang(l) {
   setHudLevel();
   updateHud();
 }
-$('lang-fi').addEventListener('click', () => setLang('fi'));
-$('lang-en').addEventListener('click', () => setLang('en'));
+$('lang-toggle').addEventListener('click', () => setLang(lang === 'fi' ? 'en' : 'fi'));
 
 // leaving the app or tab mid-level pauses the game
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') openMenu(); });
