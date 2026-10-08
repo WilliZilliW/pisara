@@ -42,7 +42,7 @@ cd android && ./gradlew assembleDebug
 
 ### Julkaisu Play-kauppaan
 
-Play-kaupan paketti (AAB) tehdään tagista. Pushaa tagi, esimerkiksi `v1.1`, niin [.github/workflows/julkaisu.yml](.github/workflows/julkaisu.yml) rakentaa allekirjoitetun AAB:n ja liittää sen samannimiseen GitHub-releaseen. Sieltä paketti ladataan Play Consoleen.
+Play-kaupan paketti (AAB) tehdään tagista. Pushaa tagi, esimerkiksi `v1.1`, niin [.github/workflows/julkaisu.yml](.github/workflows/julkaisu.yml) rakentaa allekirjoitetun AAB:n. Paketti tallentuu vain työnkulun ajon liitteeksi vuorokaudeksi: lataa se ajon sivulta (Actions → Play-julkaisu) ja vie Play Consoleen. Allekirjoitettuja paketteja ei liitetä julkisiin releaseihin.
 
 ```bash
 git tag v1.1
@@ -52,7 +52,7 @@ git tag v1.1
 git push origin v1.1
 ```
 
-Versionumero (versionCode) lasketaan tagista: `v1.1` → 10100, `v1.1.2` → 10102. Työnkulun voi ajaa myös käsin (Actions → Play-julkaisu → Run workflow), jolloin AAB tallentuu vain ajon liitteeksi eikä mitään julkaista.
+Versionumero (versionCode) lasketaan tagista: `v1.1` → 10100, `v1.1.2` → 10102. Työnkulun voi ajaa myös käsin (Actions → Play-julkaisu → Run workflow) ja antaa version itse.
 
 Allekirjoitus tehdään latausavaimella, joka luetaan repon salaisuuksista `PISARA_UPLOAD_KEYSTORE_BASE64`, `PISARA_KEYSTORE_PASSWORD`, `PISARA_KEY_ALIAS` ja `PISARA_KEY_PASSWORD`. Avainta tai salasanoja ei pidetä repossa.
 
