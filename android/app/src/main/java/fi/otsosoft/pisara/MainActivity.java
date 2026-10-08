@@ -1,4 +1,4 @@
-package io.github.willizilliw.pisara;
+package fi.otsosoft.pisara;
 
 import com.getcapacitor.BridgeActivity;
 
