@@ -1,6 +1,7 @@
-# Builds the Android test version (APK) from every push to main and publishes it as the single "latest" GitHub release,
-# replacing the previous one.
-# Newest APK: https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk
+# Builds the Android test version (APK) from every push to main and publishes it as the pre-release "testi",
+# replacing the previous one. It is signed with the public test key (android/testiavain.keystore) and does not
+# install over the official version (releases v1.x, signed with the upload key, see julkaisu.yml).
+# Newest test APK: https://github.com/WilliZilliW/pisara/releases/download/testi/Pisara.apk
 name: Android APK
 
 on:
@@ -54,12 +55,13 @@ jobs:
         run: |
           N=${{ github.run_number }}
           MSG=$(git log -1 --pretty=%s)
-          gh release delete latest --cleanup-tag --yes || true
-          gh release create latest Pisara.apk \
+          gh release delete testi --cleanup-tag --yes || true
+          gh release delete latest --cleanup-tag --yes || true   # the test release's earlier name
+          gh release create testi Pisara.apk \
             --target "${{ github.sha }}" \
             --title "Pisara testiversio $N" \
-            --latest \
+            --prerelease --latest=false \
             --notes "Testiversio Androidille, tehty mainin uusimmasta muutoksesta: $MSG
 
           Asennus: lataa Pisara.apk puhelimella ja avaa se. Android kysyy luvan asentaa sovelluksia tästä lähteestä.
-          Uusi testiversio asentuu edellisen päälle, ja edistyminen säilyy."
+          Uusi testiversio asentuu edellisen päälle, ja edistyminen säilyy. Testiversio on allekirjoitettu eri avaimella kuin virallinen versio, joten ne eivät asennu toistensa päälle."

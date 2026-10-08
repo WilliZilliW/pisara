@@ -1,9 +1,15 @@
-# Builds the signed Play Store bundle (AAB).
+# Builds the official release from a tag: the Play Store bundle (AAB) and a public APK, both signed with the
+# upload key.
 #  - Push a tag like v1.1 or v1.1.2, or run by hand (Actions → Play-julkaisu → Run workflow) with a version.
+#  - The APK is published as the GitHub release of the tag, marked latest, so
+#    https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk is always the newest official
+#    version. A run started by hand publishes nothing.
 #  - The AAB is kept only as an artifact of the run for one day: download it from the run page and upload it
-#    to Play Console. It is never attached to a public release. (The repo is public, so any signed-in GitHub
+#    to Play Console. It is not attached to the release. (The repo is public, so any signed-in GitHub
 #    user could download a release or a long-lived artifact.)
 # Versions become versionCodes as major*10000 + minor*100 + patch (see android/app/build.gradle).
+# Note: Play re-signs its copy with Google's app signing key, so an APK installed from GitHub and one from
+# Play cannot update each other; switching between them means uninstalling first.
 #
 # Needs these repository secrets (Settings → Secrets and variables → Actions):
 #   PISARA_UPLOAD_KEYSTORE_BASE64  the upload key file, base64-encoded
@@ -24,7 +30,7 @@ on:
         required: true
 
 permissions:
-  contents: read
+  contents: write   # creates the release of the tag
 
 jobs:
   aab:
@@ -88,8 +94,9 @@ jobs:
           trap 'rm -f "$PISARA_KEYSTORE_FILE"' EXIT   # the key file never outlives this step, even if the build fails
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$PISARA_KEYSTORE_FILE"
           chmod +x gradlew
-          ./gradlew bundleRelease -PpisaraVersion="$V" --no-daemon
+          ./gradlew bundleRelease assembleRelease -PpisaraVersion="$V" --no-daemon
           cp app/build/outputs/bundle/release/app-release.aab "../Pisara-$V.aab"
+          cp app/build/outputs/apk/release/app-release.apk "../Pisara-$V.apk"
 
       - name: Verify signature
         env:
@@ -98,9 +105,28 @@ jobs:
           jarsigner -verify "Pisara-$V.aab" | tee verify.txt
           grep -q "jar verified" verify.txt
           keytool -printcert -jarfile "Pisara-$V.aab" | grep -m1 Owner
+          APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          "$APKSIGNER" verify --print-certs "Pisara-$V.apk" | grep -m1 "certificate DN"
 
       - uses: actions/upload-artifact@v4
         with:
           name: Pisara-${{ steps.version.outputs.v }}-aab
           path: Pisara-${{ steps.version.outputs.v }}.aab
           retention-days: 1
+
+      - name: Publish the APK as the latest release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.version.outputs.v }}
+        run: |
+          mkdir -p dist && cp "Pisara-$V.apk" dist/Pisara.apk
+          gh release create "$GITHUB_REF_NAME" dist/Pisara.apk \
+            --title "Pisara $V" \
+            --latest \
+            --notes "Pisaran virallinen versio $V Androidille.
+
+          Asennus: lataa Pisara.apk puhelimella ja avaa se. Android kysyy luvan asentaa sovelluksia tästä lähteestä.
+          Uusi versio asentuu GitHubista asennetun edellisen päälle, ja edistyminen säilyy.
+
+          Jos olet asentanut Pisaran Google Playsta, päivitä Playn kautta. GitHubin ja Playn versiot on allekirjoitettu eri avaimilla, joten ne eivät asennu toistensa päälle."

@@ -4,7 +4,9 @@ Otsosoftin selainpeli, jossa vesipisaroita liikutellaan lotuksenlehdellä puheli
 
 **Pelaa:** https://willizilliw.github.io/pisara/
 
-**Android-testiversio:** https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk (uusin main: jokainen mainiin pushattu muutos korvaa edellisen testiversion)
+**Android:** https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk (uusin virallinen versio)
+
+**Android-testiversio:** https://github.com/WilliZilliW/pisara/releases/download/testi/Pisara.apk (uusin main)
 
 ## Pelaaminen
 
@@ -40,9 +42,14 @@ npm run rakenna
 cd android && ./gradlew assembleDebug
 ```
 
-### Julkaisu Play-kauppaan
+### Julkaisu
 
-Play-kaupan paketti (AAB) tehdään tagista. Pushaa tagi, esimerkiksi `v1.1`, niin [.github/workflows/julkaisu.yml](.github/workflows/julkaisu.yml) rakentaa allekirjoitetun AAB:n. Paketti tallentuu vain työnkulun ajon liitteeksi vuorokaudeksi: lataa se ajon sivulta (Actions → Play-julkaisu) ja vie Play Consoleen. Allekirjoitettuja paketteja ei liitetä julkisiin releaseihin.
+Virallinen versio tehdään tagista. Pushaa tagi, esimerkiksi `v1.1`, niin [.github/workflows/julkaisu.yml](.github/workflows/julkaisu.yml) rakentaa latausavaimella allekirjoitetun APK:n ja AAB:n:
+
+- **APK** julkaistaan tagin GitHub-releasena, joka merkitään uusimmaksi. Uusin virallinen APK on aina osoitteessa https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk.
+- **AAB** Play-kauppaa varten tallentuu vain ajon liitteeksi vuorokaudeksi: lataa se ajon sivulta (Actions → Play-julkaisu) ja vie Play Consoleen.
+
+Play allekirjoittaa oman kopionsa Googlen avaimella, joten GitHubista ja Playsta asennetut versiot eivät päivitä toisiaan.
 
 ```bash
 git tag v1.1
@@ -58,7 +65,7 @@ Allekirjoitus tehdään latausavaimella, joka luetaan repon salaisuuksista `PISA
 
 ### Testiversio
 
-GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee saman jokaisesta mainiin pushatusta muutoksesta ja julkaisee APK:n releasena `latest`, joka korvaa edellisen. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi versio asentuu edellisen päälle. Play-kaupan julkaisuversio allekirjoitetaan omalla avaimella, jota ei pidetä repossa.
+GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee testi-APK:n jokaisesta mainiin pushatusta muutoksesta ja julkaisee sen esijulkaisuna `testi`, joka korvaa edellisen: https://github.com/WilliZilliW/pisara/releases/download/testi/Pisara.apk. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi testiversio asentuu edellisen päälle mutta ei virallisen version päälle.
 
 ## Testaus
 
