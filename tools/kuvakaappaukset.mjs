@@ -37,15 +37,17 @@ try {
 
   await send('Emulation.setDeviceMetricsOverride', { width: 360, height: 720, deviceScaleFactor: 3, mobile: true });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-  mkdirSync(outDir, { recursive: true });
-
-  for (const [i, scene] of scenes.entries()) {
-    await send('Page.navigate', { url: `${page}?kohtaus=${encodeURIComponent(scene)}` });
-    await sleep(1500);   // load, set up the scene, let a few frames draw
-    const shot = await send('Page.captureScreenshot', { format: 'png' });
-    const file = path.join(outDir, `${i + 1}-${scene}.png`);
-    writeFileSync(file, Buffer.from(shot.result.data, 'base64'));
-    console.log('  ' + path.relative(root, file));
+  for (const lang of ['fi', 'en']) {
+    const dir = path.join(outDir, lang);
+    mkdirSync(dir, { recursive: true });
+    for (const [i, scene] of scenes.entries()) {
+      await send('Page.navigate', { url: `${page}?kohtaus=${encodeURIComponent(scene)}&kieli=${lang}` });
+      await sleep(1500);   // load, set up the scene, let a few frames draw (the result screen opens after 0.7 s)
+      const shot = await send('Page.captureScreenshot', { format: 'png' });
+      const file = path.join(dir, `${i + 1}-${scene}.png`);
+      writeFileSync(file, Buffer.from(shot.result.data, 'base64'));
+      console.log('  ' + path.relative(root, file));
+    }
   }
   ws.close();
 } finally {

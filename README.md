@@ -14,6 +14,8 @@ Otsosoftin selainpeli, jossa vesipisaroita liikutellaan lotuksenlehdellä puheli
 - **Kosketus tai hiiri:** paina ruutua siihen suuntaan, johon haluat kallistaa.
 - **Näppäimistö:** nuolinäppäimet, R aloittaa tason alusta.
 
+Peli on suomeksi ja englanniksi. Kieli valitaan laitteen kielen mukaan, ja sen voi vaihtaa valikon oikeasta yläkulmasta (FI · EN).
+
 Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee, kun reikää pienempi pisara putoaa lehden läpi tai kun törmäyksestä irronneet roiskepisarat haihtuvat. Tasoja on 60 kuudessa maailmassa (Kaste, Sadekuuro, Helle, Sammal, Ukkonen, Lampi) helposta vaikeaan. Matkan varrella tulee vastaan lehden kohoumia, joista pisarat kimpoavat, aurinkoläikkiä, jotka haihduttavat vettä, ja sammalta, joka hidastaa pisaroita. Tason 10 jälkeen lehden reunaan tulee aukkoja: ensin yksi kulma, myöhemmin useampi kulma ja lopulta myös kohtia sivuilla. Aukosta valunut pisara putoaa lampeen.
 
 ## Tiedostot
@@ -21,7 +23,7 @@ Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee
 - `index.html` – koko peli yhdessä tiedostossa (GitHub Pages näyttää tämän).
 - `pisara.html` – sama peli ilman `<html>`/`<head>`-runkoa, Claude-artifaktina julkaisua varten.
 - `android/`, `capacitor.config.json` – Android-sovellus (Capacitor 8), joka näyttää pelin `www/`-kansiosta.
-- `assets/` – sovelluskuvakkeiden ja käynnistyskuvan lähdekuvat (piirtää `tools/kuvat.ps1`), `kauppa/` – Play-kaupan kuvat. Puhelimen kuvakaappaukset (`kauppa/kuvakaappaukset/`, 1080 × 2160) otetaan komennolla `sh tools/kuvakaappaukset.sh` (tarvitsee Node.js:n ja Chromen).
+- `assets/` – sovelluskuvakkeiden ja käynnistyskuvan lähdekuvat (piirtää `tools/kuvat.ps1`), `kauppa/` – Play-kaupan kuvat. Puhelimen kuvakaappaukset suomeksi ja englanniksi (`kauppa/kuvakaappaukset/fi/` ja `en/`, 1080 × 2160) otetaan komennolla `sh tools/kuvakaappaukset.sh` (tarvitsee Node.js:n ja Chromen).
 - `tietosuoja.html` – tietosuojaseloste: https://willizilliw.github.io/pisara/tietosuoja.html
 
 Muutokset tehdään `pisara.html`-tiedostoon. `sh build.sh` tekee siitä `index.html`:n, ja `sh tools/sovellus.sh` tekee sovellusversion `www/`-kansioon (fontit mukana, toimii ilman verkkoa). `npm run rakenna` tekee molemmat ja synkronoi Android-projektin.

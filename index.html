@@ -78,6 +78,15 @@ body {
 }
 .brand { font-family: var(--display); font-weight: 600; font-size: 56px; line-height: 1; margin: 0; letter-spacing: 0.01em; }
 .brand i { font-style: normal; color: var(--water); }
+.brand-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+/* language switch: quiet text, the current language slightly brighter */
+.lang { display: flex; align-items: center; gap: 2px; font-size: 12px; letter-spacing: 0.08em; color: var(--muted); opacity: 0.7; }
+.lang button {
+  font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0;
+  padding: 6px 4px; cursor: pointer; border-radius: 6px; opacity: 0.6;
+}
+.lang button[aria-pressed="true"] { opacity: 1; color: var(--ink); cursor: default; }
+.lang button:focus-visible { outline: 2px solid var(--sun); outline-offset: 1px; }
 .lead { margin: 0; color: var(--muted); line-height: 1.5; }
 h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; line-height: 1.1; text-wrap: balance; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; color: var(--muted); margin: 0; }
@@ -148,7 +157,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
     </button>
   </div>
   <div class="meter">
-    <span class="meter-text">Vettä <b id="meter-value">100 %</b> · raja <span id="meter-need">70 %</span></span>
+    <span class="meter-text"><span id="t-water">Vettä</span> <b id="meter-value">100 %</b> · <span id="t-limit">raja</span> <span id="meter-need">70 %</span></span>
     <div class="meter-track" role="meter" id="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Vettä jäljellä">
       <div class="meter-fill" id="meter-fill"></div>
       <div class="meter-mark" id="meter-mark"></div>
@@ -158,16 +167,15 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 
 <div class="overlay" id="menu">
   <div class="panel">
-    <h1 class="brand">Pis<i>a</i>ra</h1>
-    <p class="lead">Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 60 tasoa kuudessa maailmassa.</p>
-    <ul class="how">
-      <li><b>Puhelin:</b> kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.</li>
-      <li><b>Kosketus<span data-vain-selain> tai hiiri</span>:</b> paina ruutua siihen suuntaan, johon haluat kallistaa.</li>
-      <li data-vain-selain><b>Näppäimistö:</b> nuolinäppäimet, R aloittaa alusta.</li>
-      <li><b>Reiät:</b> reikää pienempi pisara putoaa läpi ja sen vesi menetetään. Isompi pisara vierii yli.</li>
-      <li><b>Roiskeet:</b> kova törmäys irrottaa pikkupisaroita, jotka haihtuvat, ellet kerää niitä.</li>
-    </ul>
-    <p class="eyebrow">Maailmat</p>
+    <div class="brand-row">
+      <h1 class="brand">Pis<i>a</i>ra</h1>
+      <div class="lang" role="group" id="lang-switch" aria-label="Kieli">
+        <button type="button" id="lang-fi" lang="fi">FI</button><span aria-hidden="true">·</span><button type="button" id="lang-en" lang="en">EN</button>
+      </div>
+    </div>
+    <p class="lead" id="t-lead"></p>
+    <ul class="how" id="t-how"></ul>
+    <p class="eyebrow" id="t-worlds">Maailmat</p>
     <div class="worlds" id="world-tabs"></div>
     <div class="grid" id="level-grid"></div>
     <div class="row"><button class="btn primary" id="btn-play">Pelaa</button></div>
@@ -365,6 +373,23 @@ const PISARA_LEVELS = [
     drops: R(3, [[10, 10], [50, 10], [90, 10], [25, 60], [75, 60], [10, 100], [35, 100], [65, 100], [90, 100],
                  [10, 150], [50, 150], [90, 150]]) },
 ];
+
+// English names, in the same order as PISARA_WORLDS and PISARA_LEVELS
+const PISARA_WORLDS_EN = ['Dew', 'Rain Shower', 'Heatwave', 'Moss', 'Thunder', 'Pond'];
+const PISARA_LEVEL_NAMES_EN = [
+  'First Touch', 'Three Dewdrops', 'Four Corners', 'The Divide', 'Hole in the Leaf',
+  'Maze', 'Holey Leaf', 'Narrow Corridors', 'Grow First', 'Storm',
+  'Bumps', 'Two Rooms', 'Row of Holes', 'The Ring', 'The Bend',
+  'Stone Gate', 'Raindrops', 'Compartments', 'Slalom', 'Rain Shower',
+  'Patch of Sun', 'Two Patches', 'Shady Passage', 'Scorcher', 'Scorch and Holes',
+  'Hot Floor', 'Stone Desert', 'Hot Corridor', 'Dew Pearls', 'Heatwave',
+  'Soft Moss', 'Moss Island', 'Slow Bend', 'Moss and Holes', 'Brakes',
+  'Mossy Rocks', 'Warm Moss', 'Labyrinth', 'Wet Meadow', 'Moss',
+  'Lightning', 'Hail', 'Thundercloud', 'Narrow Bridge', 'Floodgates',
+  'Eye of the Storm', 'Drizzle', 'The Dam', 'Gust of Wind', 'Thunder',
+  'Two Worlds', 'Ring Road', 'Moss Maze', 'Downpour', 'Sundial',
+  'Bottleneck', 'Double Labyrinth', 'Trial by Fire', 'Dark Pond', 'The Last Drop',
+];
 </script>
 <script>
 (() => {
@@ -372,6 +397,81 @@ const PISARA_LEVELS = [
 
 const W = 100, H = 160;
 const LEVELS = PISARA_LEVELS, WORLDS = PISARA_WORLDS;
+
+// ---------- Language ----------
+// Finnish on Finnish-language devices, English elsewhere; the FI/EN switch in the menu overrides and is remembered.
+const IN_APP = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+const LANG_KEY = 'pisara-kieli';
+let lang = (() => {
+  try { const s = localStorage.getItem(LANG_KEY); if (s === 'fi' || s === 'en') return s; } catch (e) {}
+  return /^fi\b/i.test(navigator.language || '') ? 'fi' : 'en';
+})();
+
+const STRINGS = {
+  fi: {
+    level: n => `Taso ${n}`,
+    drops: n => n + (n === 1 ? ' pisara' : ' pisaraa'),
+    water: 'Vettä', limit: 'raja', waterAria: 'Vettä jäljellä',
+    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', langAria: 'Kieli',
+    lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 60 tasoa kuudessa maailmassa.',
+    how: [
+      ['Puhelin', 'kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.'],
+      [IN_APP ? 'Kosketus' : 'Kosketus tai hiiri', 'paina ruutua siihen suuntaan, johon haluat kallistaa.'],
+      IN_APP ? null : ['Näppäimistö', 'nuolinäppäimet, R aloittaa alusta.'],
+      ['Reiät', 'reikää pienempi pisara putoaa läpi ja sen vesi menetetään. Isompi pisara vierii yli.'],
+      ['Roiskeet', 'kova törmäys irrottaa pikkupisaroita, jotka haihtuvat, ellet kerää niitä.'],
+    ],
+    worlds: 'Maailmat', locked: 'lukittu', play: 'Pelaa', resume: 'Jatka',
+    levelAria: (n, name, loss, locked) => `Taso ${n}: ${name}, saa menettää ${loss} % vedestä${locked ? ', lukittu' : ''}`,
+    oneDrop: 'Yksi pisara!', allCleared: 'Kaikki tasot läpäisty!', tooMuchLost: 'Liikaa vettä menetetty',
+    goalCleared: 'Taso läpäisty', goalWater: 'Vettä säilyi vähintään 95 %', goalTime: t => 'Aika enintään ' + t,
+    waterLeftLimit: (p, lim) => `vettä jäljellä (raja ${lim})`, newBest: 'uusi ennätys', best: t => 'ennätys ' + t,
+    waterLeft: 'vettä jäljellä', required: 'vaaditaan',
+    next: 'Seuraava taso', retry: 'Uudelleen', playAgain: 'Pelaa uudelleen', tryAgain: 'Yritä uudelleen', levels: 'Tasot',
+    why: {
+      drain: 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.',
+      evap: 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.',
+      edge: 'Pisara valui reunan aukosta lampeen. Aukot näkyvät tummina kohtina lehden reunassa, useimmiten kulmissa. Jarruta ajoissa niiden lähellä.',
+      sun: 'Aurinko haihdutti vettä. Kierrä kirkkaat läikät tai ylitä ne nopeasti, äläkä jätä pisaraa paistumaan.',
+    },
+    noTiltTouch: 'Kallistus ei ole käytössä tässä näkymässä. Ohjaa painamalla ruutua siihen suuntaan, johon haluat kallistaa.',
+    noTiltDesktop: 'Ohjaa nuolinäppäimillä tai painamalla hiirellä ruutua kallistuksen suuntaan.',
+    decimal: ',', percent: ' %',
+  },
+  en: {
+    level: n => `Level ${n}`,
+    drops: n => n + (n === 1 ? ' drop' : ' drops'),
+    water: 'Water', limit: 'limit', waterAria: 'Water left',
+    menuAria: 'Level menu', restartAria: 'Restart level', langAria: 'Language',
+    lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 60 levels in six worlds.',
+    how: [
+      ['Phone', 'tilt it. The way you hold the phone when a level starts counts as flat.'],
+      [IN_APP ? 'Touch' : 'Touch or mouse', 'press the screen in the direction you want to tilt.'],
+      IN_APP ? null : ['Keyboard', 'arrow keys, R restarts.'],
+      ['Holes', 'a drop smaller than a hole falls through and its water is lost. A bigger drop rolls over.'],
+      ['Splashes', 'a hard bump knocks off small droplets that evaporate unless you collect them.'],
+    ],
+    worlds: 'Worlds', locked: 'locked', play: 'Play', resume: 'Continue',
+    levelAria: (n, name, loss, locked) => `Level ${n}: ${name}, may lose ${loss}% of the water${locked ? ', locked' : ''}`,
+    oneDrop: 'One drop!', allCleared: 'All levels cleared!', tooMuchLost: 'Too much water lost',
+    goalCleared: 'Level cleared', goalWater: 'At least 95% of the water kept', goalTime: t => 'Within ' + t,
+    waterLeftLimit: (p, lim) => `water left (limit ${lim})`, newBest: 'new best', best: t => 'best ' + t,
+    waterLeft: 'water left', required: 'required',
+    next: 'Next level', retry: 'Retry', playAgain: 'Play again', tryAgain: 'Try again', levels: 'Levels',
+    why: {
+      drain: 'A drop fell through a hole. Merge small drops first, so they grow bigger than the hole and roll over it.',
+      evap: 'Splashes evaporated. Tilt more gently so drops don’t break apart when they hit something, or collect the small droplets quickly.',
+      edge: 'A drop ran off the leaf through a gap in the rim. Gaps show as dark spots on the edge, mostly in the corners. Brake in time near them.',
+      sun: 'The sun evaporated water. Go around the bright patches or cross them quickly, and don’t leave a drop to bake.',
+    },
+    noTiltTouch: 'Tilting isn’t available here. Steer by pressing the screen in the direction you want to tilt.',
+    noTiltDesktop: 'Steer with the arrow keys, or press the screen with the mouse in the direction you want to tilt.',
+    decimal: '.', percent: '%',
+  },
+};
+const T = () => STRINGS[lang];
+const levelName = i => lang === 'en' ? PISARA_LEVEL_NAMES_EN[i] : LEVELS[i].name;
+const worldName = w => lang === 'en' ? PISARA_WORLDS_EN[w] : WORLDS[w];
 
 // ---------- Physics constants ----------
 // Drops are treated as near-spheres (a lotus leaf is superhydrophobic), so volume ∝ r³.
@@ -421,7 +521,7 @@ let view = { w: 0, h: 0, dpr: 1, s: 1, ox: 0, oy: 0 };
 
 const vol = d => d.r * d.r * d.r;
 const need = () => 1 - level.maxLoss;
-const pct = v => Math.floor(v * 100 + 1e-6) + ' %';   // round down, so "left" never looks like it meets the limit when it doesn't
+const pct = v => Math.floor(v * 100 + 1e-6) + T().percent;   // round down, so "left" never looks like it meets the limit when it doesn't
 
 // ---------- Input ----------
 const pointer = { active: false, t: { x: 0, y: 0 }, sx: 0, sy: 0 };
@@ -528,7 +628,7 @@ function chord(up) {
     o.start(t); o.stop(t + 0.45);
   });
 }
-function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+function buzz(ms) { if (simMode) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
 
 // ---------- Level flow ----------
 function makeDrop(x, y, r) {
@@ -620,13 +720,13 @@ function startLevel(i) {
 }
 
 function setHudLevel() {
-  $('hud-level').textContent = 'Taso ' + (levelIndex + 1);
-  $('hud-name').textContent = WORLDS[Math.floor(levelIndex / 10)] + ' · ' + level.name;
+  $('hud-level').textContent = T().level(levelIndex + 1);
+  $('hud-name').textContent = worldName(Math.floor(levelIndex / 10)) + ' · ' + levelName(levelIndex);
   $('meter-need').textContent = pct(need());
   $('meter-mark').style.left = `calc(${need() * 100}% - 1px)`;
 }
 
-function fmt(t) { return t.toFixed(1).replace('.', ',') + ' s'; }
+function fmt(t) { return t.toFixed(1).replace('.', T().decimal) + ' s'; }
 
 function win(kept) {
   if (simMode) { state = 'won'; return; }
@@ -634,9 +734,9 @@ function win(kept) {
   screenAwake(false);
   const key = String(levelIndex + 1);
   const goals = [
-    [true, 'Taso läpäisty'],
-    [kept >= 0.95, 'Vettä säilyi vähintään 95 %'],
-    [time <= level.par, 'Aika enintään ' + fmt(level.par)],
+    [true, T().goalCleared],
+    [kept >= 0.95, T().goalWater],
+    [time <= level.par, T().goalTime(fmt(level.par))],
   ];
   const n = goals.filter(g => g[0]).length;
   const prevBest = progress.best[key];
@@ -648,16 +748,16 @@ function win(kept) {
   chord(true); buzz([20, 40, 30]);
 
   const last = levelIndex === LEVELS.length - 1;
-  $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
-  $('res-title').textContent = last ? 'Kaikki tasot läpäisty!' : 'Yksi pisara!';
+  $('res-eyebrow').textContent = T().level(levelIndex + 1) + ' · ' + levelName(levelIndex);
+  $('res-title').textContent = last ? T().allCleared : T().oneDrop;
   $('res-facts').innerHTML =
-    `<div><b>${pct(kept)}</b><span>vettä jäljellä (raja ${pct(need())})</span></div>` +
-    `<div><b>${fmt(time)}</b><span>${isBest ? 'uusi ennätys' : 'ennätys ' + fmt(prevBest)}</span></div>`;
+    `<div><b>${pct(kept)}</b><span>${T().waterLeftLimit(pct(kept), pct(need()))}</span></div>` +
+    `<div><b>${fmt(time)}</b><span>${isBest ? T().newBest : T().best(fmt(prevBest))}</span></div>`;
   $('res-stars').innerHTML = goals.map(([ok, label]) => `<div class="star-row${ok ? '' : ' off'}"><i>★</i>${label}</div>`).join('');
   $('res-stars').hidden = false;
   setActions(last
-    ? [['Pelaa uudelleen', () => startLevel(levelIndex), true], ['Tasot', openMenu]]
-    : [['Seuraava taso', () => startLevel(levelIndex + 1), true], ['Uudelleen', () => startLevel(levelIndex)], ['Tasot', openMenu]]);
+    ? [[T().playAgain, () => startLevel(levelIndex), true], [T().levels, openMenu]]
+    : [[T().next, () => startLevel(levelIndex + 1), true], [T().retry, () => startLevel(levelIndex)], [T().levels, openMenu]]);
   setTimeout(() => { if (state === 'won') $('result').hidden = false; }, 700);
 }
 
@@ -666,21 +766,16 @@ function fail() {
   state = 'failed';
   screenAwake(false);
   chord(false); buzz(120);
-  $('res-eyebrow').textContent = 'Taso ' + (levelIndex + 1) + ' · ' + level.name;
-  $('res-title').textContent = 'Liikaa vettä menetetty';
+  $('res-eyebrow').textContent = T().level(levelIndex + 1) + ' · ' + levelName(levelIndex);
+  $('res-title').textContent = T().tooMuchLost;
   const cause = Object.keys(loss).reduce((a, b) => loss[b] > loss[a] ? b : a);
-  const why = {
-    drain: 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.',
-    evap: 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.',
-    edge: 'Pisara valui reunan aukosta lampeen. Aukot näkyvät tummina kohtina lehden reunassa, useimmiten kulmissa. Jarruta ajoissa niiden lähellä.',
-    sun: 'Aurinko haihdutti vettä. Kierrä kirkkaat läikät tai ylitä ne nopeasti, äläkä jätä pisaraa paistumaan.',
-  }[cause];
+  const why = T().why[cause];
   $('res-facts').innerHTML =
-    `<div><b>${pct(Math.max(0, remaining))}</b><span>vettä jäljellä</span></div>` +
-    `<div><b>${pct(need())}</b><span>vaaditaan</span></div>` +
+    `<div><b>${pct(Math.max(0, remaining))}</b><span>${T().waterLeft}</span></div>` +
+    `<div><b>${pct(need())}</b><span>${T().required}</span></div>` +
     `<p>${why}</p>`;
   $('res-stars').hidden = true;
-  setActions([['Yritä uudelleen', () => startLevel(levelIndex), true], ['Tasot', openMenu]]);
+  setActions([[T().tryAgain, () => startLevel(levelIndex), true], [T().levels, openMenu]]);
   $('result').hidden = false;
 }
 
@@ -701,7 +796,7 @@ function openMenu() {
   screenAwake(false);
   buildGrid();
   $('result').hidden = true; $('menu').hidden = false;
-  $('btn-play').textContent = state === 'paused' ? 'Jatka' : 'Pelaa';
+  $('btn-play').textContent = state === 'paused' ? T().resume : T().play;
 }
 
 let menuWorld = 0;
@@ -715,7 +810,7 @@ function buildGrid(world) {
     b.setAttribute('aria-pressed', String(w === menuWorld));
     let st = 0;
     for (let i = w * 10; i < w * 10 + 10; i++) st += progress.stars[String(i + 1)] || 0;
-    b.innerHTML = `${name}<small>${b.disabled ? 'lukittu' : st + ' / 30 ★'}</small>`;
+    b.innerHTML = `${worldName(w)}<small>${b.disabled ? T().locked : st + ' / 30 ★'}</small>`;
     b.addEventListener('click', () => buildGrid(w));
     tabs.appendChild(b);
   });
@@ -727,7 +822,7 @@ function buildGrid(world) {
     b.disabled = i + 1 > progress.unlocked;
     const st = progress.stars[String(i + 1)] || 0;
     b.innerHTML = `${i + 1}<small>${st ? '★'.repeat(st) : '&nbsp;'}</small>`;
-    b.setAttribute('aria-label', `Taso ${i + 1}: ${L.name}, saa menettää ${Math.round(L.maxLoss * 100)} % vedestä${b.disabled ? ', lukittu' : ''}`);
+    b.setAttribute('aria-label', T().levelAria(i + 1, levelName(i), Math.round(L.maxLoss * 100), b.disabled));
     b.addEventListener('click', () => begin(i));
     g.appendChild(b);
   });
@@ -748,8 +843,8 @@ async function begin(i) {
       if (sensor.ok) return;
       const touch = matchMedia('(pointer: coarse)').matches;
       showToast(touch
-        ? 'Kallistus ei ole käytössä tässä näkymässä. Ohjaa painamalla ruutua siihen suuntaan, johon haluat kallistaa.'
-        : 'Ohjaa nuolinäppäimillä tai painamalla hiirellä ruutua kallistuksen suuntaan.', 6000);
+        ? T().noTiltTouch
+        : T().noTiltDesktop, 6000);
     }, 1200);
   }
   startLevel(i);
@@ -760,6 +855,35 @@ $('btn-play').addEventListener('click', () => {
   begin(Math.min(progress.unlocked, LEVELS.length) - 1);
 });
 $('btn-menu').addEventListener('click', openMenu);
+
+// fill every fixed text on the page in the current language
+function applyLang() {
+  const s = T();
+  document.documentElement.lang = lang;
+  $('btn-menu').setAttribute('aria-label', s.menuAria);
+  $('btn-restart').setAttribute('aria-label', s.restartAria);
+  $('t-water').textContent = s.water;
+  $('t-limit').textContent = s.limit;
+  $('meter').setAttribute('aria-label', s.waterAria);
+  $('lang-switch').setAttribute('aria-label', s.langAria);
+  $('t-lead').textContent = s.lead;
+  $('t-how').innerHTML = s.how.filter(Boolean).map(([label, text]) => `<li><b>${label}:</b> ${text}</li>`).join('');
+  $('t-worlds').textContent = s.worlds;
+  $('btn-play').textContent = state === 'paused' ? s.resume : s.play;
+  $('lang-fi').setAttribute('aria-pressed', String(lang === 'fi'));
+  $('lang-en').setAttribute('aria-pressed', String(lang === 'en'));
+}
+function setLang(l) {
+  if (l === lang) return;
+  lang = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch (e) {}
+  applyLang();
+  buildGrid(menuWorld);
+  setHudLevel();
+  updateHud();
+}
+$('lang-fi').addEventListener('click', () => setLang('fi'));
+$('lang-en').addEventListener('click', () => setLang('en'));
 
 // leaving the app or tab mid-level pauses the game
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') openMenu(); });
@@ -778,7 +902,7 @@ function hideToast() { $('toast').hidden = true; }
 
 function updateHud() {
   const n = drops.filter(d => !d.fall && d.r >= EVAP_R).length;
-  $('hud-count').textContent = n + (n === 1 ? ' pisara' : ' pisaraa');
+  $('hud-count').textContent = T().drops(n);
   $('hud-time').textContent = fmt(time);
   const r = Math.max(0, remaining);
   $('meter-value').textContent = pct(r);
@@ -1392,6 +1516,13 @@ if (window.PISARA_TEST) {
       drops: drops.filter(d => !d.fall && d.r >= EVAP_R).map(d => [d.x, d.y, d.r]),
     }),
     show() { updateHud(); },
+    // show the game's own result screen for a cleared level (used by the screenshot tool)
+    showResult() {
+      const big = drops.filter(d => !d.fall && d.r >= EVAP_R);
+      simMode = false;
+      win(vol(big[0]) / V0);
+      simMode = true;
+    },
   };
 }
 
@@ -1401,6 +1532,7 @@ function start(data) {
   levelIndex = Math.max(0, Math.min(LEVELS.length - 1, data.level != null ? data.level : progress.unlocked - 1));
   level = LEVELS[levelIndex];
   loadDrops();
+  applyLang();
   setHudLevel();
   updateHud();
   buildGrid();
