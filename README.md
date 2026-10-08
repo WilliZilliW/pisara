@@ -40,6 +40,24 @@ npm run rakenna
 cd android && ./gradlew assembleDebug
 ```
 
+### Julkaisu Play-kauppaan
+
+Play-kaupan paketti (AAB) tehdään tagista. Pushaa tagi, esimerkiksi `v1.1`, niin [.github/workflows/julkaisu.yml](.github/workflows/julkaisu.yml) rakentaa allekirjoitetun AAB:n ja liittää sen samannimiseen GitHub-releaseen. Sieltä paketti ladataan Play Consoleen.
+
+```bash
+git tag v1.1
+```
+
+```bash
+git push origin v1.1
+```
+
+Versionumero (versionCode) lasketaan tagista: `v1.1` → 10100, `v1.1.2` → 10102. Työnkulun voi ajaa myös käsin (Actions → Play-julkaisu → Run workflow), jolloin AAB tallentuu vain ajon liitteeksi eikä mitään julkaista.
+
+Allekirjoitus tehdään latausavaimella, joka luetaan repon salaisuuksista `PISARA_UPLOAD_KEYSTORE_BASE64`, `PISARA_KEYSTORE_PASSWORD`, `PISARA_KEY_ALIAS` ja `PISARA_KEY_PASSWORD`. Avainta tai salasanoja ei pidetä repossa.
+
+### Testiversio
+
 GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee saman jokaisesta mainiin pushatusta muutoksesta ja julkaisee APK:n releasena `latest`, joka korvaa edellisen. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi versio asentuu edellisen päälle. Play-kaupan julkaisuversio allekirjoitetaan omalla avaimella, jota ei pidetä repossa.
 
 ## Testaus

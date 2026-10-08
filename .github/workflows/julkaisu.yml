@@ -1,0 +1,109 @@
+# Builds the signed Play Store bundle (AAB).
+#  - Push a tag like v1.1 or v1.1.2: the AAB is attached to a GitHub release of that tag (not marked latest,
+#    so the test APK link keeps pointing at the newest test build). Upload it to Play Console from there.
+#  - Run by hand (Actions → Play-julkaisu → Run workflow) with a version: a trial run, the AAB is kept only
+#    as an artifact of the run. Use it to check that the signing secrets work.
+# Versions become versionCodes as major*10000 + minor*100 + patch (see android/app/build.gradle).
+#
+# Needs these repository secrets (Settings → Secrets and variables → Actions):
+#   PISARA_UPLOAD_KEYSTORE_BASE64  the upload key file (.jks), base64-encoded
+#   PISARA_KEYSTORE_PASSWORD       its keystore password
+#   PISARA_KEY_ALIAS               the key alias
+#   PISARA_KEY_PASSWORD            the key password
+name: Play-julkaisu
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      versio:
+        description: 'Versio koeajoon, esim. 1.1 (ei julkaise mitään)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then V="${GITHUB_REF_NAME#v}"; else V="${{ inputs.versio }}"; fi
+          case "$V" in
+            ''|*[!0-9.]*|.*|*.|*..*) echo "::error::Versio '$V' ei kelpaa: käytä muotoa 1.2 tai 1.2.3"; exit 1 ;;
+          esac
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Check signing secrets
+        env:
+          KS: ${{ secrets.PISARA_UPLOAD_KEYSTORE_BASE64 }}
+          SP: ${{ secrets.PISARA_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.PISARA_KEY_ALIAS }}
+          KP: ${{ secrets.PISARA_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$KS" ] || missing="$missing PISARA_UPLOAD_KEYSTORE_BASE64"
+          [ -n "$SP" ] || missing="$missing PISARA_KEYSTORE_PASSWORD"
+          [ -n "$KA" ] || missing="$missing PISARA_KEY_ALIAS"
+          [ -n "$KP" ] || missing="$missing PISARA_KEY_PASSWORD"
+          if [ -n "$missing" ]; then echo "::error::Puuttuvat salaisuudet:$missing"; exit 1; fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Build the game for the app (www/)
+        run: |
+          npm ci --ignore-scripts
+          sh tools/sovellus.sh
+          npx cap sync android
+
+      - name: Build signed AAB
+        working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PISARA_UPLOAD_KEYSTORE_BASE64 }}
+          PISARA_KEYSTORE_PASSWORD: ${{ secrets.PISARA_KEYSTORE_PASSWORD }}
+          PISARA_KEY_ALIAS: ${{ secrets.PISARA_KEY_ALIAS }}
+          PISARA_KEY_PASSWORD: ${{ secrets.PISARA_KEY_PASSWORD }}
+        run: |
+          export PISARA_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$PISARA_KEYSTORE_FILE"
+          chmod +x gradlew
+          ./gradlew bundleRelease -PpisaraVersion=${{ steps.version.outputs.v }} --no-daemon
+          rm -f "$PISARA_KEYSTORE_FILE"
+          cp app/build/outputs/bundle/release/app-release.aab "../Pisara-${{ steps.version.outputs.v }}.aab"
+
+      - name: Verify signature
+        run: |
+          jarsigner -verify "Pisara-${{ steps.version.outputs.v }}.aab" | tee verify.txt
+          grep -q "jar verified" verify.txt
+          keytool -printcert -jarfile "Pisara-${{ steps.version.outputs.v }}.aab" | grep -m1 Owner
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Pisara-${{ steps.version.outputs.v }}-aab
+          path: Pisara-${{ steps.version.outputs.v }}.aab
+          retention-days: 90
+
+      - name: Publish release for the tag
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=${{ steps.version.outputs.v }}
+          gh release create "$GITHUB_REF_NAME" "Pisara-$V.aab" \
+            --title "Pisara $V" \
+            --latest=false \
+            --notes "Play-kaupan julkaisupaketti (AAB), versio $V. Lataa tiedosto Play Consoleen: Testaa ja julkaise → valitse kanava → Luo uusi julkaisu."
