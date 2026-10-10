@@ -43,6 +43,14 @@ body {
   display: grid; place-items: center; cursor: pointer;
 }
 .icon-btn svg { width: 20px; height: 20px; }
+/* skip button: the number of skips left sits in a small badge on its corner */
+.icon-btn.skip { position: relative; }
+.icon-btn.skip:disabled { opacity: 0.35; cursor: default; }
+.skip-count {
+  position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 9px; background: var(--sun); color: var(--sun-ink);
+  font: 600 11px/17px var(--body); font-variant-numeric: tabular-nums; text-align: center;
+}
 .icon-btn:focus-visible, .btn:focus-visible, .lvl:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
 .hud-title { flex: 1; min-width: 0; line-height: 1.15; }
 .hud-title b { font-family: var(--display); font-weight: 600; font-size: 17px; display: block; }
@@ -51,6 +59,17 @@ body {
 .hud-stats b { font-family: var(--display); font-weight: 600; font-size: 17px; display: block; }
 .hud-stats span { color: var(--muted); font-size: 13px; }
 #bubble { width: 38px; height: 38px; flex: none; }
+.hud-title b, .hud-stats b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* narrow phones: smaller controls so the level title keeps room; the narrowest drop the tilt gauge */
+@media (max-width: 380px) {
+  .hud-row { gap: 6px; }
+  .icon-btn { width: 36px; height: 36px; }
+  #bubble { width: 32px; height: 32px; }
+  .hud-title b, .hud-stats b { font-size: 15px; }
+}
+@media (max-width: 340px) {
+  #bubble { display: none; }
+}
 
 .meter { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .meter-text { flex: none; min-width: 0; }
@@ -144,6 +163,10 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
     <div class="hud-title"><b id="hud-level">Taso 1</b><span id="hud-name"></span></div>
     <div class="hud-stats"><b id="hud-count">2</b><span id="hud-time">0,0 s</span></div>
     <canvas id="bubble" width="76" height="76" aria-hidden="true"></canvas>
+    <button class="icon-btn skip" id="btn-skip" aria-label="Ohita taso" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l8 7-8 7z"/><path d="M19 5v14"/></svg>
+      <span class="skip-count" id="skip-count">3</span>
+    </button>
     <button class="icon-btn" id="btn-restart" aria-label="Aloita taso alusta">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
     </button>
@@ -418,6 +441,8 @@ const STRINGS = {
     waterLeftLimit: (p, lim) => `vettä jäljellä (raja ${lim})`, newBest: 'uusi ennätys', best: t => 'ennätys ' + t,
     waterLeft: 'vettä jäljellä', required: 'vaaditaan',
     next: 'Seuraava taso', retry: 'Uudelleen', playAgain: 'Pelaa uudelleen', tryAgain: 'Yritä uudelleen', levels: 'Tasot',
+    skipAria: n => `Ohita taso (ohituksia jäljellä ${n})`, skipButton: n => `Ohita taso (${n})`,
+    skipBack: (n, all) => `Ohitus palautui: ohituksia jäljellä ${n}/${all}.`, skippedAria: ', ohitettu',
     why: {
       drain: 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.',
       evap: 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.',
@@ -448,6 +473,8 @@ const STRINGS = {
     waterLeftLimit: (p, lim) => `water left (limit ${lim})`, newBest: 'new best', best: t => 'best ' + t,
     waterLeft: 'water left', required: 'required',
     next: 'Next level', retry: 'Retry', playAgain: 'Play again', tryAgain: 'Try again', levels: 'Levels',
+    skipAria: n => `Skip level (${n} skips left)`, skipButton: n => `Skip level (${n})`,
+    skipBack: (n, all) => `Skip returned: ${n} of ${all} skips left.`, skippedAria: ', skipped',
     why: {
       drain: 'A drop fell through a hole. Merge small drops first, so they grow bigger than the hole and roll over it.',
       evap: 'Splashes evaporated. Tilt more gently so drops don’t break apart when they hit something, or collect the small droplets quickly.',
@@ -486,9 +513,17 @@ const bg = document.createElement('canvas'), bgx = bg.getContext('2d');
 
 // ---------- Progress ----------
 const SAVE_KEY = 'pisara-progress-v2';
-let progress = { unlocked: 1, best: {}, stars: {} };
+// skipped: level numbers skipped and not cleared since. Skips left = SKIPS minus that count, so clearing
+// a skipped level gives its skip back without a separate counter that could drift.
+let progress = { unlocked: 1, best: {}, stars: {}, skipped: [] };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.unlocked) progress = Object.assign(progress, s); } catch (e) {}
+if (!Array.isArray(progress.skipped)) progress.skipped = [];
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch (e) {} }
+
+const SKIPS = 3;
+const skipsLeft = () => SKIPS - progress.skipped.length;
+// a level can be skipped while it is not cleared yet, unless it is the last one
+const canSkip = i => i < LEVELS.length - 1 && !progress.stars[String(i + 1)] && skipsLeft() > 0;
 
 // ---------- State ----------
 let levelIndex = 0, level = LEVELS[0];
@@ -706,8 +741,30 @@ function startLevel(i) {
   $('menu').hidden = true; $('result').hidden = true;
   setHudLevel();
   updateHud();
+  updateSkip();
   renderBg();
 }
+
+// skip the current level: it stays without stars, and the next level opens and starts right away
+function skipLevel() {
+  if (!canSkip(levelIndex)) return;
+  const n = levelIndex + 1;
+  if (!progress.skipped.includes(n)) progress.skipped.push(n);
+  progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, n + 1));
+  save();
+  startLevel(levelIndex + 1);
+}
+
+// the skip button shows only where a skip makes sense (an uncleared level that is not the last one)
+function updateSkip() {
+  const b = $('btn-skip');
+  const cleared = !!progress.stars[String(levelIndex + 1)];
+  b.hidden = cleared || levelIndex >= LEVELS.length - 1;
+  b.disabled = skipsLeft() <= 0;
+  $('skip-count').textContent = skipsLeft();
+  b.setAttribute('aria-label', T().skipAria(skipsLeft()));
+}
+$('btn-skip').addEventListener('click', () => { unlockAudio(); if (state === 'play' || state === 'failing') skipLevel(); });
 
 function setHudLevel() {
   $('hud-level').textContent = T().level(levelIndex + 1);
@@ -734,7 +791,11 @@ function win(kept) {
   if (isBest) progress.best[key] = time;
   progress.stars[key] = Math.max(progress.stars[key] || 0, n);
   progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, levelIndex + 2));
+  // clearing a level that was skipped earlier gives its skip back
+  const skipBack = progress.skipped.includes(levelIndex + 1);
+  if (skipBack) progress.skipped = progress.skipped.filter(s => s !== levelIndex + 1);
   save();
+  updateSkip();
   chord(true); buzz([20, 40, 30]);
 
   const last = levelIndex === LEVELS.length - 1;
@@ -742,7 +803,8 @@ function win(kept) {
   $('res-title').textContent = last ? T().allCleared : T().oneDrop;
   $('res-facts').innerHTML =
     `<div><b>${pct(kept)}</b><span>${T().waterLeftLimit(pct(kept), pct(need()))}</span></div>` +
-    `<div><b>${fmt(time)}</b><span>${isBest ? T().newBest : T().best(fmt(prevBest))}</span></div>`;
+    `<div><b>${fmt(time)}</b><span>${isBest ? T().newBest : T().best(fmt(prevBest))}</span></div>` +
+    (skipBack ? `<p>${T().skipBack(skipsLeft(), SKIPS)}</p>` : '');
   $('res-stars').innerHTML = goals.map(([ok, label]) => `<div class="star-row${ok ? '' : ' off'}"><i>★</i>${label}</div>`).join('');
   $('res-stars').hidden = false;
   setActions(last
@@ -765,7 +827,9 @@ function fail() {
     `<div><b>${pct(need())}</b><span>${T().required}</span></div>` +
     `<p>${why}</p>`;
   $('res-stars').hidden = true;
-  setActions([[T().tryAgain, () => startLevel(levelIndex), true], [T().levels, openMenu]]);
+  const actions = [[T().tryAgain, () => startLevel(levelIndex), true], [T().levels, openMenu]];
+  if (canSkip(levelIndex)) actions.splice(1, 0, [T().skipButton(skipsLeft()), skipLevel]);
+  setActions(actions);
   $('result').hidden = false;
 }
 
@@ -811,8 +875,9 @@ function buildGrid(world) {
     b.className = 'lvl' + (i === levelIndex ? ' current' : '');
     b.disabled = i + 1 > progress.unlocked;
     const st = progress.stars[String(i + 1)] || 0;
-    b.innerHTML = `${i + 1}<small>${st ? '★'.repeat(st) : '&nbsp;'}</small>`;
-    b.setAttribute('aria-label', T().levelAria(i + 1, levelName(i), Math.round(L.maxLoss * 100), b.disabled));
+    const skipped = progress.skipped.includes(i + 1);
+    b.innerHTML = `${i + 1}<small>${st ? '★'.repeat(st) : skipped ? '↷' : '&nbsp;'}</small>`;
+    b.setAttribute('aria-label', T().levelAria(i + 1, levelName(i), Math.round(L.maxLoss * 100), b.disabled) + (skipped ? T().skippedAria : ''));
     b.addEventListener('click', () => begin(i));
     g.appendChild(b);
   });
@@ -872,6 +937,7 @@ function setLang(l) {
   buildGrid(menuWorld);
   setHudLevel();
   updateHud();
+  updateSkip();
 }
 $('lang-toggle').addEventListener('click', () => setLang(lang === 'fi' ? 'en' : 'fi'));
 
@@ -1531,6 +1597,7 @@ function start(data) {
   applyLang();
   setHudLevel();
   updateHud();
+  updateSkip();
   buildGrid();
   resize();
   window.addEventListener('resize', resize);
