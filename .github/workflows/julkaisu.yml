@@ -4,9 +4,10 @@
 #  - The APK is published as the GitHub release of the tag, marked latest, so
 #    https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk is always the newest official
 #    version. A run started by hand publishes nothing.
-#  - The AAB is kept only as an artifact of the run for one day: download it from the run page and upload it
-#    to Play Console. It is not attached to the release. (The repo is public, so any signed-in GitHub
-#    user could download a release or a long-lived artifact.)
+#  - The AAB is uploaded to Google Play (track from the repository variable PLAY_TRACK, default "alpha" =
+#    closed testing; release notes from kauppa/julkaisutiedote/) when the secret PLAY_SERVICE_ACCOUNT_JSON
+#    exists. It is also kept as an artifact of the run for one day, never attached to the release. (The repo
+#    is public, so any signed-in GitHub user could download a release or a long-lived artifact.)
 # Versions become versionCodes as major*10000 + minor*100 + patch (see android/app/build.gradle).
 # Note: Play re-signs its copy with Google's app signing key, so an APK installed from GitHub and one from
 # Play cannot update each other; switching between them means uninstalling first.
@@ -16,6 +17,7 @@
 #   PISARA_KEYSTORE_PASSWORD       its keystore password
 #   PISARA_KEY_ALIAS               the key alias
 #   PISARA_KEY_PASSWORD            the key password
+#   PLAY_SERVICE_ACCOUNT_JSON      (optional) Google Play service account key, allowed to release this app
 # Only the repository owner can push tags or run workflows by hand, and no workflow here runs on pull
 # requests, so forks never get the secrets.
 name: Play-julkaisu
@@ -113,6 +115,38 @@ jobs:
           name: Pisara-${{ steps.version.outputs.v }}-aab
           path: Pisara-${{ steps.version.outputs.v }}.aab
           retention-days: 1
+
+      # Play upload: only for tags, and only once the service account secret exists (until then it is skipped
+      # and the AAB is uploaded by hand from the artifact). If the upload fails, the job stops before the
+      # GitHub release, so GitHub and Play stay on the same version.
+      - name: Check Play upload
+        id: play
+        if: github.event_name == 'push'
+        env:
+          SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
+        run: |
+          if [ -n "$SA" ]; then
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+            echo "track=$TRACK" >> "$GITHUB_OUTPUT"
+            echo "Ladataan Playhin kanavalle $TRACK"
+          else
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PLAY_SERVICE_ACCOUNT_JSON puuttuu, joten Play-lataus ohitetaan. Lataa AAB ajon liitteestä käsin."
+          fi
+
+      - name: Upload to Google Play
+        if: steps.play.outputs.upload == 'true'
+        # pinned to the commit of v1.1.5: this step handles the service account key
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: fi.otsosoft.pisara
+          releaseFiles: Pisara-${{ steps.version.outputs.v }}.aab
+          releaseName: ${{ steps.version.outputs.v }}
+          track: ${{ steps.play.outputs.track }}
+          status: completed
+          whatsNewDirectory: kauppa/julkaisutiedote
 
       - name: Publish the APK as the latest release
         if: github.event_name == 'push'

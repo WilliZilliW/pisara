@@ -49,7 +49,7 @@ cd android && ./gradlew assembleDebug
 Virallinen versio tehdään tagista. Pushaa tagi, esimerkiksi `v1.1`, niin [.github/workflows/julkaisu.yml](.github/workflows/julkaisu.yml) rakentaa latausavaimella allekirjoitetun APK:n ja AAB:n:
 
 - **APK** julkaistaan tagin GitHub-releasena, joka merkitään uusimmaksi. Uusin virallinen APK on aina osoitteessa https://github.com/WilliZilliW/pisara/releases/latest/download/Pisara.apk.
-- **AAB** Play-kauppaa varten tallentuu vain ajon liitteeksi vuorokaudeksi: lataa se ajon sivulta (Actions → Play-julkaisu) ja vie Play Consoleen.
+- **AAB** ladataan automaattisesti Google Playhin kanavalle, jonka repomuuttuja `PLAY_TRACK` kertoo (oletus `alpha` = suljettu testaus, tuotanto `production`). Julkaisutiedote luetaan tiedostoista `kauppa/julkaisutiedote/whatsnew-fi-FI` ja `whatsnew-en-US`, jotka päivitetään ennen tagia. Lataus vaatii salaisuuden `PLAY_SERVICE_ACCOUNT_JSON` (Google Play -palvelutilin avain); ilman sitä lataus ohitetaan ja AAB haetaan ajon liitteestä käsin. AAB on ajon liitteenä vuorokauden.
 
 Play allekirjoittaa oman kopionsa Googlen avaimella, joten GitHubista ja Playsta asennetut versiot eivät päivitä toisiaan.
 
