@@ -947,6 +947,10 @@ function split(d, nx, ny, impact) {
   plip(fr * 2, 0.06);
 }
 
+// Corner radius of a ridge: half its thickness for slim ridges (a capsule), at most 3 units for big blocks,
+// so a big block reads as the rectangle it is. Drawing and collision both use this.
+const wallRadius = (ww, wh) => Math.min(ww, wh, 6) / 2;
+
 function collideWalls(d) {
   // gaps in the rim: once the drop's centre is past the edge it tips over into the pond
   if ((d.x < 0 && inGap('l', d.y)) || (d.x > W && inGap('r', d.y)) || (d.y < 0 && inGap('t', d.x)) || (d.y > H && inGap('b', d.x))) {
@@ -960,17 +964,19 @@ function collideWalls(d) {
   if (d.x > W - d.r && !inGap('r', d.y)) { d.x = W - d.r; hit(d, -1, 0); }
   if (d.y < d.r && !inGap('t', d.x)) { d.y = d.r; hit(d, 0, 1); }
   if (d.y > H - d.r && !inGap('b', d.x)) { d.y = H - d.r; hit(d, 0, -1); }
-  // raised ridges
+  // raised ridges: rounded rectangles, the same shape that is drawn (corner radius from wallRadius)
   for (const [wx, wy, ww, wh] of (level.walls || [])) {
-    const cx = Math.max(wx, Math.min(d.x, wx + ww));
-    const cy = Math.max(wy, Math.min(d.y, wy + wh));
+    const rr = wallRadius(ww, wh);
+    // nearest point on the rectangle shrunk by the corner radius; the wall is everything within rr of it
+    const cx = Math.max(wx + rr, Math.min(d.x, wx + ww - rr));
+    const cy = Math.max(wy + rr, Math.min(d.y, wy + wh - rr));
     const dx = d.x - cx, dy = d.y - cy;
-    const d2 = dx * dx + dy * dy;
-    if (d2 >= d.r * d.r) continue;
+    const d2 = dx * dx + dy * dy, reach = d.r + rr;
+    if (d2 >= reach * reach) continue;
     let nx, ny;
     if (d2 > 1e-9) {
       const dist = Math.sqrt(d2); nx = dx / dist; ny = dy / dist;
-      d.x = cx + nx * d.r; d.y = cy + ny * d.r;
+      d.x = cx + nx * reach; d.y = cy + ny * reach;
     } else {
       // centre inside the ridge: push out along the shallowest side
       const opts = [[d.x - wx, -1, 0], [wx + ww - d.x, 1, 0], [d.y - wy, 0, -1], [wy + wh - d.y, 0, 1]].sort((a, b) => a[0] - b[0]);
@@ -1296,12 +1302,12 @@ function renderBg() {
   for (const [wx, wy, ww, wh] of (level.walls || [])) {
     c.save();
     c.shadowColor = 'rgba(10, 35, 10, 0.5)'; c.shadowBlur = 3 * dpr * s / 4; c.shadowOffsetY = 0.8 * dpr * s / 4;
-    roundRect(c, wx, wy, ww, wh, Math.min(ww, wh) / 2);
+    roundRect(c, wx, wy, ww, wh, wallRadius(ww, wh));
     const rg = c.createLinearGradient(wx, wy, wx + (ww < wh ? ww : 0), wy + (ww < wh ? 0 : wh));
     rg.addColorStop(0, '#8cc26e'); rg.addColorStop(0.45, '#4b8a3c'); rg.addColorStop(1, '#2a5a29');
     c.fillStyle = rg; c.fill();
     c.restore();
-    roundRect(c, wx, wy, ww, wh, Math.min(ww, wh) / 2);
+    roundRect(c, wx, wy, ww, wh, wallRadius(ww, wh));
     c.strokeStyle = 'rgba(220, 250, 200, 0.18)'; c.lineWidth = 0.3; c.stroke();
   }
   c.restore();
