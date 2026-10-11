@@ -79,7 +79,7 @@ window.PISARA_OHJEET = {
   74: 'Y Y Y Y Y Y Y Y Y Y Y Y O O O',
   75: 'A A A A A A A A A A V V V',
   76: 'A A A A A A A A A A A A V V V',
-  77: 'A A A A V~ V~ V~ V~ V~ V~ A A A A',
+  77: 'A A A A V~ V~ V~ V~ V~ V~ V~ V~ A A A A',
   78: 'V V V O O O A A A A A A A A A A O O O O',
   79: 'V V V A A A A A A A A O O O O O O O O A A A A A A',
   80: 'V~ V~ V~ V~ O~ O~ O~ O~ O~ O~ A A A A A V V V A A V V V V A A A A',

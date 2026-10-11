@@ -455,6 +455,7 @@ const PISARA_LEVELS = [
   // honey: [x, y, r] a honeycomb; a rinse pool washes the honey off too. Honey spreads when drops merge.
   // A slow honeyed drop lets a clean one catch up with it in the open, where no wall would hold either,
   // and a honeyed drop crosses a hole that would swallow a clean one.
+  // A honeyed drop creeps round a hole along its rim, so a gap in a ridge holding a hole is as wide as the hole.
   // Intended solutions: 71: A   72: V Y   73: A V O   74: Y O   75: A V   76: A V   77: A V A (rinse before the sun)
   //   78: V O A O   79: V A O A   80: V O A V A V A
   { name: 'Kenno', maxLoss: 0.3, par: 15, gaps: [],
@@ -463,7 +464,7 @@ const PISARA_LEVELS = [
   { name: 'Kiinniotto', maxLoss: 0.3, par: 15, gaps: [['t', -3, 103], ['b', -3, 103]],
     honey: [[25, 40, 6]], drops: [[50, 40, 4], [50, 120, 4]] },
   { name: 'Tahmea silta', maxLoss: 0.25, par: 25, gaps: [],
-    walls: [[0, 78, 20, 5], [32, 78, 36, 5], [80, 78, 20, 5]], drains: [[26, 80.5, 6.5], [74, 80.5, 6.5]],
+    walls: [[0, 78, 20, 5], [32, 78, 36, 5], [80, 78, 20, 5]], drains: [[26, 80.5, 5.5], [74, 80.5, 5.5]],
     honey: [[26, 40, 6], [74, 40, 6]], drops: [[26, 15, 3.5], [74, 15, 3.5], [50, 140, 4.5]] },
   { name: 'Ohitus', maxLoss: 0.3, par: 20, gaps: [['l', -3, 163], ['r', -3, 163]],
     honey: [[70, 60, 6]], drops: [[20, 60, 4], [70, 130, 4]] },
@@ -478,11 +479,11 @@ const PISARA_LEVELS = [
     suns: [[8, 115, 11], [30, 115, 11], [52, 115, 11], [74, 115, 11], [96, 115, 11], [19, 136, 11], [41, 136, 11], [63, 136, 11], [85, 136, 11]],
     drops: [[50, 12, 4], [50, 155, 4]] },
   { name: 'Vihreä hunaja', maxLoss: 0.25, par: 25, gaps: [],
-    walls: [[0, 92, 86, 14]], drains: [[93, 99, 8]], gates: [[0, 50, 100, 5, 'G']],
+    walls: [[0, 92, 86, 14]], drains: [[93, 99, 7]], gates: [[0, 50, 100, 5, 'G']],
     dyes: [[6, 15, 6, 'Y'], [94, 15, 6, 'B']], honey: [[94, 75, 6]],
     drops: [[50, 15, 4], [50, 145, 4.5]] },
   { name: 'Kaksi kerrosta', maxLoss: 0.2, par: 30, gaps: [],
-    walls: [[14, 50, 86, 12], [0, 105, 86, 12]], drains: [[7, 56, 8], [93, 111, 8]], honey: [[7, 30, 6]],
+    walls: [[14, 50, 86, 12], [0, 105, 86, 12]], drains: [[7, 56, 7], [93, 111, 7]], honey: [[7, 30, 6]],
     drops: [[50, 15, 4], [50, 85, 4], [50, 150, 4]] },
   { name: 'Hunajapurkki', maxLoss: 0.12, par: 35, gaps: [],
     walls: [[0, 75, 42, 12], [58, 75, 42, 12]], drains: [[50, 81, 8]], gates: [[0, 35, 100, 5, 'G']],
@@ -625,7 +626,6 @@ const MOSS_DRAG = 5;       // extra velocity decay per second in moss
 const MOSS_GRIP = 3;       // moss holds drops this many times harder
 const HONEY_DRAG = 6;      // extra velocity decay per second for a honeyed drop
 const HONEY_GRIP = 3;      // honey holds a drop this many times harder
-const HONEY_HOLE_DRAG = 3; // a honeyed drop crossing a hole clings to its rim and creeps over a little slower
 const SENSITIVITY = 2.3;   // ~26° of tilt = full tilt
 
 // ---------- DOM ----------
@@ -1209,6 +1209,26 @@ function collideWalls(d) {
   }
 }
 
+// A honeyed drop does not fall into a hole: it hangs on to the rim and creeps round it, its outer edge on the
+// edge of the hole. Tilting straight at the hole makes it slide round the rim instead of balancing on it.
+// A gap in a ridge as wide as its hole lets honey creep round, while a clean drop cannot get by.
+function clingToRims(d, ax, ay) {
+  for (const [hx, hy, hr] of (level.drains || [])) {
+    if (d.r >= hr) continue;
+    const rr = hr - d.r, dx = d.x - hx, dy = d.y - hy, dist = Math.hypot(dx, dy);
+    if (dist >= rr) continue;
+    let nx, ny;
+    if (dist > 1e-6) { nx = dx / dist; ny = dy / dist; }
+    else { const g = Math.hypot(ax, ay); nx = g ? -ax / g : 0; ny = g ? -ay / g : -1; }   // dead centre: back up the tilt
+    d.x = hx + nx * rr; d.y = hy + ny * rr;
+    const vn = d.vx * nx + d.vy * ny;
+    if (vn < 0) { d.vx -= vn * nx; d.vy -= vn * ny; }
+    // tilt pushing straight in: creep round the rim (to the side the tilt leans to, else clockwise)
+    const tx = -ny, ty = nx, ft = ax * tx + ay * ty, fn = -(ax * nx + ay * ny);
+    if (fn > 0 && Math.abs(ft) < fn * 0.3) { const k = (ft < 0 ? -1 : 1) * fn * 0.3 * STEP; d.vx += tx * k; d.vy += ty * k; }
+  }
+}
+
 const inRect = (d, [x, y, w, h]) => d.x >= x && d.x <= x + w && d.y >= y && d.y <= y + h;
 
 // shrink a drop and book the lost volume under its cause
@@ -1259,8 +1279,6 @@ function step(dt) {
     const inMoss = (level.moss || []).some(m => inRect(d, m));
 
     let fx = ax, fy = ay;
-    // a honeyed drop over a hole it would otherwise fall into: remember the hole, for the clinging look
-    d.hole = d.h ? (level.drains || []).find(([hx, hy, hr]) => d.r < hr && Math.hypot(d.x - hx, d.y - hy) < hr + d.r * 0.6) || null : null;
     for (const [hx, hy, hr] of (level.drains || [])) {
       if (d.r >= hr || d.h) continue;         // too big to fall through, or honeyed: clings and rolls over the hole
       const dx = hx - d.x, dy = hy - d.y, dist = Math.hypot(dx, dy);
@@ -1277,20 +1295,20 @@ function step(dt) {
     else {
       d.vx += fx * dt; d.vy += fy * dt;
       // viscous drag is relatively stronger for small drops
-      const k = Math.exp(-(0.9 + 3 / d.r + (inMoss ? MOSS_DRAG : 0) + (d.h ? HONEY_DRAG : 0) + (d.hole ? HONEY_HOLE_DRAG : 0)) * dt);
+      const k = Math.exp(-(0.9 + 3 / d.r + (inMoss ? MOSS_DRAG : 0) + (d.h ? HONEY_DRAG : 0)) * dt);
       d.vx *= k; d.vy *= k;
       const sp = Math.hypot(d.vx, d.vy);
       if (sp > MAX_SPEED) { d.vx *= MAX_SPEED / sp; d.vy *= MAX_SPEED / sp; }
       d.x += d.vx * dt; d.y += d.vy * dt;
       collideWalls(d);
+      if (d.h) clingToRims(d, ax, ay);
       // a honeyed drop leaves a thin, fading smear behind it
       if (d.h && !simMode && Math.random() < dt * 30) splashes.push({ trail: true, x: d.x, y: d.y, vx: 0, vy: 0, r: d.r * 0.3, life: 1.2 });
     }
 
     // shape: rolling drops elongate slightly along their path, then wobble back
     const sp = Math.hypot(d.vx, d.vy);
-    // over a hole, honey stretches out along its way as it creeps from rim to rim
-    const m = d.hole && sp > 0.5 ? 0.24 : Math.min(sp / 450, 0.16), a2 = 2 * Math.atan2(d.vy, d.vx);
+    const m = Math.min(sp / 450, 0.16), a2 = 2 * Math.atan2(d.vy, d.vx);
     const tx = m * Math.cos(a2), ty = m * Math.sin(a2);
     const w = ringFreq(d.r), c = 2 * 0.13 * w;
     d.evx += (-w * w * (d.ex - tx) - c * d.evx) * dt;
@@ -1692,32 +1710,6 @@ function drawDrop(c, d) {
   c.restore();
 }
 
-// A honeyed drop over a hole hangs on to its rim: amber strands from the drop to the edge of the hole,
-// sagging into the dark, on the side the drop came from and the side it is heading to.
-function drawHoneyStrands(c, d) {
-  const { s, ox, oy } = view;
-  const [hx, hy, hr] = d.hole;
-  const base = Math.atan2(d.y - hy, d.x - hx);
-  const R = d.r * s, cx = ox + d.x * s, cy = oy + d.y * s, hcx = ox + hx * s, hcy = oy + hy * s;
-  c.save();
-  c.lineCap = 'round';
-  for (let k = 0; k < 8; k++) {
-    const off = k * Math.PI / 4 + 0.3;
-    const a = base + off;
-    const rx = hcx + Math.cos(a) * hr * s, ry = hcy + Math.sin(a) * hr * s;   // a point on the hole's rim
-    const dx = rx - cx, dy = ry - cy, len = Math.hypot(dx, dy);
-    if (len > R * 2.8 || len < R * 0.9) continue;   // only rim within reach of the drop, outside it
-    const sx = cx + dx / len * R * 0.85, sy = cy + dy / len * R * 0.85;
-    // the strand sags towards the middle of the hole
-    const mx = (sx + rx) / 2 + (hcx - (sx + rx) / 2) * 0.25, my = (sy + ry) / 2 + (hcy - (sy + ry) / 2) * 0.25;
-    c.beginPath(); c.moveTo(sx, sy); c.quadraticCurveTo(mx, my, rx, ry);
-    c.strokeStyle = `rgba(232, 160, 40, ${0.95 - 0.5 * len / (R * 2.8)})`;
-    c.lineWidth = Math.max(1, R * 0.2 * (1.2 - len / (R * 2.8)));
-    c.stroke();
-  }
-  c.restore();
-}
-
 // Pigment symbols: red ▲, yellow ●, blue ■. A mixed colour shows the symbols of its pigments side by side,
 // e.g. green = ● ■, which also tells how to make it.
 function drawSymbols(c, mask, cx, cy, size, fill) {
@@ -1769,7 +1761,6 @@ function draw(t) {
   }
   for (const d of drops) {
     ctx.globalAlpha = d.fall ? Math.min(1, d.r / 2) : d.r < EVAP_R ? Math.min(1, d.r / EVAP_R + 0.2) : 1;
-    if (d.hole && !d.fall) drawHoneyStrands(ctx, d);
     drawDrop(ctx, d);
   }
   // sunlight falling on the leaf, gently shimmering with heat
