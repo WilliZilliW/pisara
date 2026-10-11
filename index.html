@@ -104,6 +104,10 @@ body {
   background: none; border: 0; padding: 6px 4px; border-radius: 6px; cursor: pointer;
 }
 .lang:hover { opacity: 1; }
+.corner-toggles { display: flex; align-items: center; gap: 6px; }
+/* colour symbols toggle: dim while off, bright while on */
+.lang.symbols { letter-spacing: 0.15em; font-size: 11px; }
+.lang.symbols[aria-pressed="true"] { opacity: 1; color: var(--ink); }
 .lang:focus-visible { opacity: 1; outline: 2px solid var(--sun); outline-offset: 1px; }
 .lead { margin: 0; color: var(--muted); line-height: 1.5; }
 h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; line-height: 1.1; text-wrap: balance; }
@@ -184,6 +188,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
       <div class="meter-fill" id="meter-fill"></div>
       <div class="meter-mark" id="meter-mark"></div>
     </div>
+    <button type="button" class="lang symbols" id="symbols-hud" aria-pressed="false" hidden>▲●■</button>
   </div>
 </header>
 
@@ -191,7 +196,10 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
   <div class="panel">
     <div class="brand-row">
       <h1 class="brand">Pis<i>a</i>ra</h1>
-      <button type="button" class="lang" id="lang-toggle" lang="en" aria-label="In English">EN</button>
+      <div class="corner-toggles">
+        <button type="button" class="lang symbols" id="symbols-toggle" aria-pressed="false" hidden>▲●■</button>
+        <button type="button" class="lang" id="lang-toggle" lang="en" aria-label="In English">EN</button>
+      </div>
     </div>
     <p class="lead" id="t-lead"></p>
     <ul class="how" id="t-how"></ul>
@@ -426,7 +434,7 @@ const PISARA_LEVELS = [
     drops: R(4, [[15, 20], [50, 82], [85, 140]]) },
   { name: 'Kaksi porttia', maxLoss: 0.25, par: 25, gaps: [],
     gates: [[0, 50, 100, 5, 'G'], [0, 105, 100, 5, 'O']],
-    dyes: [[12, 15, 6, 'Y'], [88, 15, 6, 'B'], [40, 101, 6, 'R'], [15, 101, 6, 'Y']], rinses: [[70, 101, 6]],
+    dyes: [[12, 15, 6, 'Y'], [88, 15, 6, 'B'], [40, 98.5, 6, 'R'], [15, 98.5, 6, 'Y']], rinses: [[70, 98.5, 6]],
     drops: [[50, 15, 4], [50, 140, 4.5]] },
   { name: 'Värit ja reiät', maxLoss: 0.2, par: 30, gaps: [],
     gates: [[0, 85, 100, 5, 'G']], drains: [[50, 30, 4.5], [25, 62, 4]], suns: [[75, 62, 8]],
@@ -434,8 +442,8 @@ const PISARA_LEVELS = [
     drops: [[20, 15, 3], [80, 15, 3], [50, 55, 3], [50, 135, 4.5]] },
   { name: 'Kolme sekoitusta', maxLoss: 0.15, par: 35, gaps: [],
     gates: [[0, 40, 100, 4, 'G'], [0, 95, 100, 4, 'O'], [0, 130, 100, 4, 'P']],
-    dyes: [[15, 36, 6, 'Y'], [85, 36, 6, 'B'], [50, 91, 6, 'R'], [25, 91, 6, 'Y'], [50, 126, 6, 'R'], [75, 126, 6, 'B']],
-    rinses: [[75, 91, 6], [25, 126, 6]],
+    dyes: [[15, 33.5, 6, 'Y'], [85, 33.5, 6, 'B'], [50, 88.5, 6, 'R'], [25, 88.5, 6, 'Y'], [50, 123.5, 6, 'R'], [75, 123.5, 6, 'B']],
+    rinses: [[75, 88.5, 6], [25, 123.5, 6]],
     drops: [...R(3.5, [[30, 15], [70, 15]]), [50, 150, 4.5]] },
   { name: 'Sateenkaari', maxLoss: 0.15, par: 45, gaps: [],
     walls: [[70, 40, 30, 4], [0, 90, 30, 4]], gates: [[0, 40, 70, 4, 'P'], [30, 90, 70, 4, 'O']],
@@ -483,6 +491,9 @@ const COLOUR_RGB = { 1: '226, 72, 62', 2: '242, 200, 56', 4: '58, 123, 224', 3: 
 // Finnish on Finnish-language devices, English elsewhere; the FI/EN switch in the menu overrides and is remembered.
 const IN_APP = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
 const LANG_KEY = 'pisara-kieli';
+// colour symbols (▲ ● ■) for the Vesivärit levels: off by default, switched on from the menu and remembered
+const SYMBOLS_KEY = 'pisara-symbolit';
+let showSymbols = (() => { try { return localStorage.getItem(SYMBOLS_KEY) === '1'; } catch (e) { return false; } })();
 let lang = (() => {
   try { const s = localStorage.getItem(LANG_KEY); if (s === 'fi' || s === 'en') return s; } catch (e) {}
   return /^fi\b/i.test(navigator.language || '') ? 'fi' : 'en';
@@ -493,7 +504,7 @@ const STRINGS = {
     level: n => `Taso ${n}`,
     drops: n => n + (n === 1 ? ' pisara' : ' pisaraa'),
     water: 'Vettä', limit: 'raja', waterAria: 'Vettä jäljellä',
-    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta',
+    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', symbolsAria: 'Värisymbolit (avuksi värien tunnistamiseen)',
     lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 60 tasoa kuudessa maailmassa.',
     how: [
       ['Puhelin', 'kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.'],
@@ -525,7 +536,7 @@ const STRINGS = {
     level: n => `Level ${n}`,
     drops: n => n + (n === 1 ? ' drop' : ' drops'),
     water: 'Water', limit: 'limit', waterAria: 'Water left',
-    menuAria: 'Level menu', restartAria: 'Restart level',
+    menuAria: 'Level menu', restartAria: 'Restart level', symbolsAria: 'Colour symbols (help telling colours apart)',
     lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 60 levels in six worlds.',
     how: [
       ['Phone', 'tilt it. The way you hold the phone when a level starts counts as flat.'],
@@ -841,6 +852,7 @@ function setHudLevel() {
   $('hud-name').textContent = worldName(Math.floor(levelIndex / 10)) + ' · ' + levelName(levelIndex);
   $('meter-need').textContent = pct(need());
   $('meter-mark').style.left = `calc(${need() * 100}% - 1px)`;
+  updateSymbolsToggle();
 }
 
 function fmt(t) { return t.toFixed(1).replace('.', T().decimal) + ' s'; }
@@ -926,6 +938,7 @@ function openMenu() {
 let menuWorld = 0;
 function buildGrid(world) {
   menuWorld = world != null ? world : Math.floor(levelIndex / 10);
+  updateSymbolsToggle();
   const tabs = $('world-tabs'); tabs.innerHTML = '';
   WORLDS.forEach((name, w) => {
     const b = document.createElement('button');
@@ -982,8 +995,29 @@ $('btn-play').addEventListener('click', () => {
 $('btn-menu').addEventListener('click', openMenu);
 
 // fill every fixed text on the page in the current language
+// The symbols toggle sits in the menu once Vesivärit (levels 61–70) is open, and in the game's top bar on
+// those levels, since only they have colours. Both buttons switch the same setting.
+function updateSymbolsToggle() {
+  const menu = $('symbols-toggle'), hud = $('symbols-hud');
+  menu.hidden = progress.unlocked <= 60;
+  hud.hidden = !(level.gates || level.dyes);
+  for (const b of [menu, hud]) {
+    b.setAttribute('aria-pressed', String(showSymbols));
+    b.setAttribute('aria-label', T().symbolsAria);
+  }
+}
+const toggleSymbols = () => {
+  showSymbols = !showSymbols;
+  try { localStorage.setItem(SYMBOLS_KEY, showSymbols ? '1' : '0'); } catch (e) {}
+  updateSymbolsToggle();
+  renderBg();   // gates and dye pools are drawn into the cached background
+};
+$('symbols-toggle').addEventListener('click', toggleSymbols);
+$('symbols-hud').addEventListener('click', toggleSymbols);
+
 function applyLang() {
   const s = T();
+  updateSymbolsToggle();
   document.documentElement.lang = lang;
   $('btn-menu').setAttribute('aria-label', s.menuAria);
   $('btn-restart').setAttribute('aria-label', s.restartAria);
@@ -1460,57 +1494,23 @@ function renderBg() {
     c.strokeStyle = 'rgba(220, 250, 200, 0.18)'; c.lineWidth = 0.3; c.stroke();
   }
 
-  // dye flowers: petals in the pigment's colour, the pigment symbol on the flower's heart
+  // dye pools: a soft pool of pigment with its symbol
   for (const [px, py, pr, col] of (level.dyes || [])) {
-    const rgb = COLOUR_RGB[PIGMENT[col]], petals = 6, turn = rnd() * Math.PI;
-    c.save();
-    c.shadowColor = 'rgba(10, 35, 10, 0.4)'; c.shadowBlur = 2 * dpr * s / 4; c.shadowOffsetY = 0.5 * dpr * s / 4;
-    for (let k = 0; k < petals; k++) {
-      const a = turn + k / petals * Math.PI * 2;
-      const ex = px + Math.cos(a) * pr * 0.52, ey = py + Math.sin(a) * pr * 0.52;
-      const pg = c.createRadialGradient(ex, ey, 0, ex, ey, pr * 0.5);
-      pg.addColorStop(0, `rgba(${rgb}, 1)`); pg.addColorStop(1, `rgba(${rgb}, 0.8)`);
-      c.fillStyle = pg;
-      c.beginPath(); c.ellipse(ex, ey, pr * 0.5, pr * 0.3, a, 0, Math.PI * 2); c.fill();
-    }
-    c.restore();
-    for (let k = 0; k < petals; k++) {   // a pale vein along each petal
-      const a = turn + k / petals * Math.PI * 2;
-      c.beginPath(); c.moveTo(px + Math.cos(a) * pr * 0.2, py + Math.sin(a) * pr * 0.2);
-      c.lineTo(px + Math.cos(a) * pr * 0.85, py + Math.sin(a) * pr * 0.85);
-      c.strokeStyle = 'rgba(255, 255, 255, 0.35)'; c.lineWidth = 0.25; c.stroke();
-    }
-    const hg = c.createRadialGradient(px - pr * 0.08, py - pr * 0.08, 0, px, py, pr * 0.36);
-    hg.addColorStop(0, '#fff6c8'); hg.addColorStop(1, '#e0b23c');
-    c.fillStyle = hg;
-    c.beginPath(); c.arc(px, py, pr * 0.34, 0, Math.PI * 2); c.fill();
-    drawSymbols(c, PIGMENT[col], px, py, pr * 0.16, 'rgba(70, 45, 10, 0.9)');
+    const rgb = COLOUR_RGB[PIGMENT[col]];
+    const pg = c.createRadialGradient(px - pr * 0.2, py - pr * 0.2, 0, px, py, pr);
+    pg.addColorStop(0, `rgba(${rgb}, 0.95)`); pg.addColorStop(0.7, `rgba(${rgb}, 0.7)`); pg.addColorStop(1, `rgba(${rgb}, 0.15)`);
+    c.fillStyle = pg;
+    c.beginPath(); c.arc(px, py, pr, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = `rgba(${rgb}, 0.9)`; c.lineWidth = 0.35;
+    c.beginPath(); c.arc(px + pr * 0.1, py + pr * 0.05, pr * 0.62, 0.4, 4.2); c.stroke();
+    if (showSymbols) drawSymbols(c, PIGMENT[col], px, py, pr * 0.3, 'rgba(255, 255, 255, 0.9)');
   }
-  // rinse puddles: an uneven puddle of clear water with ripples and a sky reflection
+  // rinse pools: a pool of clear water
   for (const [px, py, pr] of (level.rinses || [])) {
-    const pts = 14, rad = Array.from({ length: pts }, () => pr * (0.85 + rnd() * 0.25));
-    c.beginPath();
-    for (let k = 0; k <= pts; k++) {
-      const a = k / pts * Math.PI * 2, r1 = rad[k % pts];
-      const x = px + Math.cos(a) * r1 * 1.15, y = py + Math.sin(a) * r1 * 0.85;   // puddles lie flat: wider than tall
-      if (k === 0) c.moveTo(x, y); else c.quadraticCurveTo(px + Math.cos(a - Math.PI / pts) * r1 * 1.2, py + Math.sin(a - Math.PI / pts) * r1 * 0.9, x, y);
-    }
-    c.closePath();
-    // damp, darker leaf around the water
-    c.save();
-    c.shadowColor = 'rgba(20, 55, 20, 0.55)'; c.shadowBlur = 3 * dpr * s / 4;
-    c.fillStyle = 'rgba(40, 90, 40, 0.5)'; c.fill();
-    c.restore();
-    const wg = c.createLinearGradient(px, py - pr, px, py + pr);
-    wg.addColorStop(0, 'rgba(205, 238, 250, 0.9)'); wg.addColorStop(1, 'rgba(95, 165, 195, 0.85)');
-    c.fillStyle = wg; c.fill();
-    // the sky reflected on the still surface
-    c.save(); c.clip();
-    c.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    c.beginPath(); c.ellipse(px - pr * 0.35, py - pr * 0.3, pr * 0.55, pr * 0.16, -0.15, 0, Math.PI * 2); c.fill();
-    c.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    c.beginPath(); c.ellipse(px + pr * 0.35, py + pr * 0.25, pr * 0.25, pr * 0.07, -0.15, 0, Math.PI * 2); c.fill();
-    c.restore();
+    const rg2 = c.createRadialGradient(px, py, 0, px, py, pr);
+    rg2.addColorStop(0, 'rgba(225, 245, 255, 0.75)'); rg2.addColorStop(1, 'rgba(160, 215, 240, 0.25)');
+    c.fillStyle = rg2;
+    c.beginPath(); c.arc(px, py, pr, 0, Math.PI * 2); c.fill();
   }
   // coloured gates: a tinted, see-through membrane carrying the symbols of its pigments
   for (const [gx, gy, gw, gh, col] of (level.gates || [])) {
@@ -1519,7 +1519,7 @@ function renderBg() {
     c.fillStyle = `rgba(${rgb}, 0.6)`; c.fill();
     c.strokeStyle = `rgba(${rgb}, 1)`; c.lineWidth = 0.5; c.stroke();
     const along = gw >= gh, len = along ? gw : gh, n = Math.max(1, Math.round(len / 16));
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; showSymbols && i < n; i++) {
       const t = (i + 0.5) / n;
       drawSymbols(c, PIGMENT[col], along ? gx + gw * t : gx + gw / 2, along ? gy + gh / 2 : gy + gh * t,
         Math.min(gw, gh) * 0.28, 'rgba(255, 255, 255, 0.9)');
@@ -1606,7 +1606,7 @@ function drawDrop(c, d) {
   c.beginPath(); c.arc(hx + R * 0.02, hy + R * 0.01, Math.max(0.6, R * 0.07), 0, Math.PI * 2);
   c.fillStyle = '#fff'; c.fill();
   // the pigment symbols, so colours read without telling them apart by hue
-  if (d.c && R > 9) drawSymbols(c, d.c, 0, R * 0.2, R * 0.2, 'rgba(255, 255, 255, 0.75)');
+  if (showSymbols && d.c && R > 9) drawSymbols(c, d.c, 0, R * 0.2, R * 0.2, 'rgba(255, 255, 255, 0.75)');
   c.restore();
 }
 
