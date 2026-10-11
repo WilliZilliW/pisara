@@ -1496,15 +1496,20 @@ function renderBg() {
       if (k === 0) c.moveTo(x, y); else c.quadraticCurveTo(px + Math.cos(a - Math.PI / pts) * r1 * 1.2, py + Math.sin(a - Math.PI / pts) * r1 * 0.9, x, y);
     }
     c.closePath();
+    // damp, darker leaf around the water
+    c.save();
+    c.shadowColor = 'rgba(20, 55, 20, 0.55)'; c.shadowBlur = 3 * dpr * s / 4;
+    c.fillStyle = 'rgba(40, 90, 40, 0.5)'; c.fill();
+    c.restore();
     const wg = c.createLinearGradient(px, py - pr, px, py + pr);
-    wg.addColorStop(0, 'rgba(200, 235, 250, 0.85)'); wg.addColorStop(1, 'rgba(90, 160, 190, 0.75)');
+    wg.addColorStop(0, 'rgba(205, 238, 250, 0.9)'); wg.addColorStop(1, 'rgba(95, 165, 195, 0.85)');
     c.fillStyle = wg; c.fill();
-    c.strokeStyle = 'rgba(40, 80, 60, 0.45)'; c.lineWidth = 0.45; c.stroke();
+    // the sky reflected on the still surface
     c.save(); c.clip();
-    c.strokeStyle = 'rgba(255, 255, 255, 0.7)'; c.lineWidth = 0.3;
-    for (const k of [0.3, 0.6]) { c.beginPath(); c.ellipse(px + pr * 0.15, py + pr * 0.1, pr * k * 1.15, pr * k * 0.75, 0, 0, Math.PI * 2); c.stroke(); }
-    c.fillStyle = 'rgba(255, 255, 255, 0.55)';
-    c.beginPath(); c.ellipse(px - pr * 0.45, py - pr * 0.35, pr * 0.35, pr * 0.12, -0.3, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    c.beginPath(); c.ellipse(px - pr * 0.35, py - pr * 0.3, pr * 0.55, pr * 0.16, -0.15, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    c.beginPath(); c.ellipse(px + pr * 0.35, py + pr * 0.25, pr * 0.25, pr * 0.07, -0.15, 0, Math.PI * 2); c.fill();
     c.restore();
   }
   // coloured gates: a tinted, see-through membrane carrying the symbols of its pigments
