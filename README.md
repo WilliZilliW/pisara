@@ -22,7 +22,9 @@ Kun taso 60 on läpi, avautuu seitsemäs maailma Vesivärit (tasot 61–70). Sii
 
 Kahdeksas maailma Hunaja (tasot 71–80) tuo kuusikulmaiset hunajakennot. Kennon läpi kulkenut pisara muuttuu tahmeaksi: se liikkuu hitaasti, ei kimpoa eikä halkea, ja reiän kohdalla se tarttuu reiän reunaan ja kiertää sitä pitkin putoamatta. Hunaja leviää yhdistyessä, ja huuhtelupiste pesee sen pois. Hitaan pisaran kiinni saa nopealla pisaralla keskellä lehteä, missä mikään seinä ei pysäyttäisi kumpaakaan.
 
-Väri- ja hunajatasot ovat toistaiseksi auki kaikille testausta varten (`COLOURS_OPEN` tiedostossa `pisara.html`).
+Yhdeksäs maailma Monsuuni (tasot 81–90) yhdistää kaiken aiemman: reiät, kohoumat, auringot, sammaleen, reuna-aukot, väriportit ja hunajan.
+
+Tasot 61–90 ovat toistaiseksi auki kaikille testausta varten (`COLOURS_OPEN` tiedostossa `pisara.html`).
 
 ## Tiedostot
 

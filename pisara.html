@@ -224,7 +224,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 //   a corner gap is two entries (one per side) that both name the corner, e.g. 'tr'.
 //   Default (see makeGaps): none in Kaste, then open corners first and gaps along the sides later.
 const R = (r, list) => list.map(([x, y]) => [x, y, r]);
-const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi', 'Vesivärit', 'Hunaja'];
+const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi', 'Vesivärit', 'Hunaja', 'Monsuuni'];
 const PISARA_LEVELS = [
   // ----- Kaste -----
   { name: 'Ensimmäinen kosketus', maxLoss: 0.30, par: 6,  drops: [[30, 45, 5], [70, 115, 5]] },
@@ -483,10 +483,55 @@ const PISARA_LEVELS = [
     dyes: [[6, 12, 6, 'Y'], [94, 12, 6, 'B']], honey: [[94, 57, 6]], rinses: [[12, 96, 7], [12, 109, 7]],
     suns: [[9, 126, 10], [31, 126, 10], [53, 126, 10], [75, 126, 10], [97, 126, 10], [20, 144, 10], [42, 144, 10], [64, 144, 10], [86, 144, 10]],
     drops: [[50, 12, 4], [50, 155, 4.5]] },
+  // ----- Monsuuni: every earlier element together -----
+  // Holes, bumps, suns, moss and gaps in the rim meet colour gates and honey. A slow honeyed drop, a drop held
+  // in moss or against a bump all let the others catch up; a rinse pool washes off the honey that a hole needs.
+  // Intended solutions: 81: V A O A (merge first, to roll over the small hole)   82: A V   83: O V A V (blue first,
+  //   so the drop ends in the honey lane, not the rinse lane)   84: V Y   85: A V   86: O A V A (stop under the first
+  //   hole and go left in the shade, not along the sunny ridge)   87: A O Y A V Y A O A V (merge, then blue, then
+  //   round the red pool to yellow)   88: Y V   89: V O A V A   90: A V A O A V A
+  { name: 'Kasvu ja kenno', maxLoss: 0.2, par: 30, gaps: [['t', 85, 103, 'tr'], ['r', -3, 15, 'tr']],
+    walls: [[14, 50, 86, 5], [0, 105, 86, 5]], drains: [[7, 52.5, 4.5], [93, 107.5, 7]], honey: [[50, 99.5, 5]],
+    drops: [...R(3.5, [[20, 20], [50, 20], [80, 20]]), [50, 150, 4]] },
+  { name: 'Sininen ankkuri', maxLoss: 0.2, par: 25, gaps: [['l', 85, 163], ['r', 85, 163]],
+    gates: [[0, 78, 100, 5, 'B']], dyes: [[50, 55, 6, 'B']], honey: [[50, 100, 6]], suns: [[22, 120, 8]],
+    drops: [[50, 20, 4], [65, 140, 4], [85, 140, 4]] },
+  { name: 'Väärä pesu', maxLoss: 0.2, par: 30, gaps: [],
+    walls: [[14, 100, 86, 12]], drains: [[7, 106, 7]], gates: [[0, 50, 100, 5, 'G']],
+    dyes: [[6, 15, 6, 'Y'], [94, 15, 6, 'B']], honey: [[6, 75, 6]], rinses: [[94, 75, 6]],
+    drops: [[50, 15, 4], [50, 150, 4.5]] },
+  { name: 'Sammalkiinniotto', maxLoss: 0.25, par: 20, gaps: [['t', -3, 103], ['b', -3, 103]],
+    moss: [[40, 0, 20, 160]], honey: [[25, 40, 6]], suns: [[6, 85, 5]],
+    drops: [[25, 40, 4], [50, 120, 4]] },
+  { name: 'Kaksi porttia, yksi kenno', maxLoss: 0.2, par: 25, gaps: [['l', 105, 163], ['r', 105, 163]],
+    walls: [[48, 0, 4, 100]], gates: [[0, 100, 48, 5, 'O'], [52, 100, 48, 5, 'P']],
+    dyes: [[25, 45, 6, 'R'], [25, 70, 6, 'Y'], [75, 45, 6, 'R'], [75, 70, 6, 'B']], honey: [[25, 130, 6]],
+    drops: [[25, 20, 4], [75, 20, 4]] },
+  { name: 'Varjon kautta', maxLoss: 0.1, par: 35, gaps: [],
+    walls: [[0, 50, 86, 12], [14, 105, 86, 12]], drains: [[93, 56, 7], [7, 111, 7]], honey: [[94, 15, 6]],
+    suns: [[30, 99, 9], [50, 99, 9], [70, 99, 9]],
+    drops: [[20, 15, 4], [50, 150, 4]] },
+  { name: 'Sekoitus', maxLoss: 0.2, par: 40, gaps: [],
+    walls: [[0, 120, 43, 12], [57, 120, 43, 12]], drains: [[50, 126, 7]], gates: [[0, 80, 100, 5, 'G']],
+    dyes: [[6, 8, 6, 'Y'], [94, 8, 6, 'B'], [50, 8, 6, 'R']], honey: [[6, 100, 6]],
+    drops: [[25, 20, 4], [75, 20, 4], [50, 150, 4]] },
+  { name: 'Kivikko', maxLoss: 0.25, par: 25, gaps: [['l', -3, 163], ['r', -3, 163]],
+    rocks: [[30, 80, 6], [70, 80, 6], [50, 50, 5], [50, 110, 5]], honey: [[35, 20, 6]], suns: [[80, 150, 7]],
+    drops: [[35, 20, 4], [80, 135, 4]] },
+  { name: 'Pitkä matka', maxLoss: 0.12, par: 40, gaps: [],
+    walls: [[0, 75, 86, 12]], drains: [[93, 81, 7]], gates: [[0, 35, 100, 5, 'G']],
+    dyes: [[6, 12, 6, 'Y'], [94, 12, 6, 'B']], moss: [[0, 42, 100, 20]], honey: [[94, 66, 6]], rinses: [[6, 95, 7]],
+    suns: [[20, 115, 9], [40, 115, 9], [60, 115, 9], [80, 115, 9], [10, 132, 9], [30, 132, 9], [50, 132, 9], [70, 132, 9], [90, 132, 9]],
+    drops: [[50, 12, 4], ...R(3.5, [[30, 152], [70, 152]])] },
+  { name: 'Sadekausi', maxLoss: 0.06, par: 50, gaps: [],
+    walls: [[48, 0, 4, 50], [0, 110, 43, 12], [57, 110, 43, 12]], drains: [[50, 116, 7]], gates: [[0, 75, 100, 5, 'P']],
+    dyes: [[25, 69, 5, 'R'], [75, 69, 5, 'B']], honey: [[30, 104.5, 5]], rinses: [[94, 128, 6]],
+    suns: [[28, 141, 10], [50, 141, 10], [72, 141, 10]],
+    drops: R(3.5, [[25, 15], [75, 15], [20, 150], [80, 150]]) },
 ];
 
 // English names, in the same order as PISARA_WORLDS and PISARA_LEVELS
-const PISARA_WORLDS_EN = ['Dew', 'Rain Shower', 'Heatwave', 'Moss', 'Thunder', 'Pond', 'Watercolours', 'Honey'];
+const PISARA_WORLDS_EN = ['Dew', 'Rain Shower', 'Heatwave', 'Moss', 'Thunder', 'Pond', 'Watercolours', 'Honey', 'Monsoon'];
 const PISARA_LEVEL_NAMES_EN = [
   'First Touch', 'Three Dewdrops', 'Four Corners', 'The Divide', 'Hole in the Leaf',
   'Maze', 'Holey Leaf', 'Narrow Corridors', 'Grow First', 'Storm',
@@ -503,6 +548,7 @@ const PISARA_LEVEL_NAMES_EN = [
   'First Colour', 'Two Colours', 'Green', 'Orange and Purple', 'Rinse',
   'Fetch', 'Two Gates', 'Colours and Holes', 'Three Mixes', 'Rainbow',
   'Honeycomb', 'Catch-up', 'Sticky Bridge', 'Overtaking', 'Wash', 'Anchor', 'Scorching Sun', 'Green Honey', 'Two Floors', 'Honey Jar',
+  'Grow and Comb', 'Blue Anchor', 'Wrong Wash', 'Mossy Catch', 'Two Gates, One Comb', 'Through the Shade', 'The Mix', 'Rockfield', 'Long Way Down', 'Rainy Season',
 ];
 </script>
 <script>
@@ -641,7 +687,7 @@ const skipsLeft = () => SKIPS - progress.skipped.length;
 // a level can be skipped while it is not cleared yet
 // level 60 closes the original 60 levels; its clear screen says so (Vesivärit opens like any next level)
 const LAST_CLASSIC = 59;
-// for now the levels after 60 (Vesivärit, Hunaja) are open to everyone for testing; set to false to lock them again
+// for now the levels after 60 (Vesivärit, Hunaja, Monsuuni) are open to everyone for testing; set to false to lock them again
 const COLOURS_OPEN = true;
 const isOpen = i => i + 1 <= progress.unlocked || (COLOURS_OPEN && i > LAST_CLASSIC);
 const canSkip = i => i < LEVELS.length - 1 && !progress.stars[String(i + 1)] && skipsLeft() > 0;
