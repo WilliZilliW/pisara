@@ -535,7 +535,7 @@ const IN_APP = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform =
 const LANG_KEY = 'pisara-kieli';
 // colour symbols (▲ ● ■) for the Vesivärit levels: off by default, switched on from the menu and remembered
 const SYMBOLS_KEY = 'pisara-symbolit';
-let showSymbols = (() => { try { return localStorage.getItem(SYMBOLS_KEY) === '1'; } catch (e) { return false; } })();
+let showSymbols = (() => { try { return localStorage.getItem(SYMBOLS_KEY) !== '0'; } catch (e) { return true; } })();   // on unless turned off
 let lang = (() => {
   try { const s = localStorage.getItem(LANG_KEY); if (s === 'fi' || s === 'en') return s; } catch (e) {}
   return /^fi\b/i.test(navigator.language || '') ? 'fi' : 'en';
