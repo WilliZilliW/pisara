@@ -18,6 +18,8 @@ Peli on suomeksi ja englanniksi. Kieli valitaan laitteen kielen mukaan, ja sen v
 
 Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee, kun reikää pienempi pisara putoaa lehden läpi tai kun törmäyksestä irronneet roiskepisarat haihtuvat. Tasoja on 60 kuudessa maailmassa (Kaste, Sadekuuro, Helle, Sammal, Ukkonen, Lampi) helposta vaikeaan. Matkan varrella tulee vastaan lehden kohoumia, joista pisarat kimpoavat, aurinkoläikkiä, jotka haihduttavat vettä, ja sammalta, joka hidastaa pisaroita. Tason 10 jälkeen lehden reunaan tulee aukkoja: ensin yksi kulma, myöhemmin useampi kulma ja lopulta myös kohtia sivuilla. Aukosta valunut pisara putoaa lampeen.
 
+Kun taso 60 on läpi, avautuu seitsemäs maailma Vesivärit (tasot 61–70). Siinä värilliset portit päästävät läpi vain samanvärisen pisaran. Pisarat värjäytyvät kukista (punainen ▲, keltainen ●, sininen ■), ja portin värin saa vain sekoittamalla: keltainen + sininen = vihreä, punainen + keltainen = oranssi, punainen + sininen = violetti, ja kaikki kolme tekevät kurasta, joka ei pääse minkään portin läpi. Lätäkkö pesee värin pois.
+
 ## Tiedostot
 
 - `index.html` – koko peli yhdessä tiedostossa (GitHub Pages näyttää tämän).

@@ -69,13 +69,72 @@
     }
     return total;
   }
+  // ---- colour levels (Vesivärit): distances that know about gates, dye pools and rinse pools ----
+  // A breadth-first search over (cell, colour) states on a coarse grid: moving into a gate cell is allowed only
+  // with the gate's colour, a dye cell adds its pigment, a rinse cell clears the colour. The distance from one
+  // drop to another is the shortest walk that reaches the other drop's cell in any colour, so a drop that must
+  // visit a dye pool before a gate is pulled towards that pool.
+  const PIG = { R: 1, Y: 2, B: 4, O: 3, G: 6, P: 5 };
+  const CG = 4, CW = W / CG, CH = H / CG;
+  let colourLevel = null, cellInfo = null;
+  function colourCells(L) {
+    if (colourLevel === L) return cellInfo;
+    colourLevel = L;
+    const blocked = new Uint8Array(CW * CH), gate = new Int8Array(CW * CH).fill(-1);
+    const dye = new Uint8Array(CW * CH), rinse = new Uint8Array(CW * CH);
+    const inRect = (x, y, [rx, ry, rw, rh], pad) => x > rx - pad && x < rx + rw + pad && y > ry - pad && y < ry + rh + pad;
+    for (let j = 0; j < CH; j++) for (let i = 0; i < CW; i++) {
+      const x = (i + 0.5) * CG, y = (j + 0.5) * CG, k = j * CW + i;
+      if ((L.walls || []).some(w => inRect(x, y, w, 1))) blocked[k] = 1;
+      for (const [rx, ry, rr] of L.rocks || []) if (Math.hypot(x - rx, y - ry) < rr + 1) blocked[k] = 1;
+      for (const g of L.gates || []) if (inRect(x, y, g, 1)) gate[k] = PIG[g[4]];
+      for (const [px, py, pr, col] of L.dyes || []) if (Math.hypot(x - px, y - py) < pr) dye[k] |= PIG[col];
+      for (const [px, py, pr] of L.rinses || []) if (Math.hypot(x - px, y - py) < pr) rinse[k] = 1;
+    }
+    cellInfo = { blocked, gate, dye, rinse };
+    return cellInfo;
+  }
+  const ccell = (x, y) => Math.max(0, Math.min(CH - 1, Math.floor(y / CG))) * CW + Math.max(0, Math.min(CW - 1, Math.floor(x / CG)));
+  function colourField(L, x, y, c) {
+    const { blocked, gate, dye, rinse } = colourCells(L);
+    const d = new Int32Array(CW * CH * 8).fill(1e8), q = new Int32Array(CW * CH * 8);
+    const s = ccell(x, y) * 8 + c; d[s] = 0; let head = 0, tail = 0; q[tail++] = s;
+    while (head < tail) {
+      const st = q[head++], cl = st & 7, k = st >> 3, i = k % CW, j = (k - i) / CW, nd = d[st] + 1;
+      for (const n of [i > 0 ? k - 1 : -1, i < CW - 1 ? k + 1 : -1, j > 0 ? k - CW : -1, j < CH - 1 ? k + CW : -1]) {
+        if (n < 0 || blocked[n]) continue;
+        if (gate[n] >= 0 && gate[n] !== cl) continue;
+        const nc = rinse[n] ? 0 : (cl | dye[n]);
+        const ns = n * 8 + nc;
+        if (d[ns] > nd) { d[ns] = nd; q[tail++] = ns; }
+      }
+    }
+    return d;
+  }
+  function colourMst(L, drops) {
+    const n = drops.length;
+    if (n < 2) return 0;
+    const f = drops.map(([x, y, , c]) => colourField(L, x, y, c || 0));
+    const dist = (a, b) => { const k = ccell(drops[b][0], drops[b][1]) * 8; let m = 1e8; for (let c = 0; c < 8; c++) m = Math.min(m, f[a][k + c]); return m; };
+    const inTree = new Array(n).fill(false), best = new Array(n).fill(Infinity);
+    best[0] = 0; let total = 0;
+    for (let k = 0; k < n; k++) {
+      let u = -1;
+      for (let v = 0; v < n; v++) if (!inTree[v] && (u < 0 || best[v] < best[u])) u = v;
+      inTree[u] = true; total += Math.min(best[u], 2000);
+      for (let v = 0; v < n; v++) if (!inTree[v]) best[v] = Math.min(best[v], dist(u, v), dist(v, u));
+    }
+    return total * CG;
+  }
+
   function score(L, info) {
     if (info.state === 'won') return 1e9 - info.time;
     if (info.state === 'failed' || info.state === 'failing') return -1e9;
-    return info.remaining * 2000 - mst(L, info.drops) * G * 3 - info.drops.length * 40;
+    const spread = (L.gates || []).length ? colourMst(L, info.drops) : mst(L, info.drops) * G;
+    return info.remaining * 2000 - spread * 3 - info.drops.length * 40;
   }
   // coarse fingerprint of a position, so the beam does not fill with near-identical states
-  const key = info => info.drops.map(([x, y, r]) => `${Math.round(x / 3)},${Math.round(y / 3)},${Math.round(r * 2)}`).sort().join('|');
+  const key = info => info.drops.map(([x, y, r, c]) => `${Math.round(x / 3)},${Math.round(y / 3)},${Math.round(r * 2)},${c || 0}`).sort().join('|');
 
   // yield to the browser; a MessageChannel is not throttled the way timers are in a hidden tab
   const channel = new MessageChannel(), waiting = [];
