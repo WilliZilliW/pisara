@@ -597,6 +597,9 @@ const skipsLeft = () => SKIPS - progress.skipped.length;
 // a level can be skipped while it is not cleared yet
 // level 60 closes the original 60 levels; its clear screen says so (Vesivärit opens like any next level)
 const LAST_CLASSIC = 59;
+// for now the Vesivärit levels (61–70) are open to everyone for testing; set to false to lock them behind level 60 again
+const COLOURS_OPEN = true;
+const isOpen = i => i + 1 <= progress.unlocked || (COLOURS_OPEN && i > LAST_CLASSIC);
 const canSkip = i => i < LEVELS.length - 1 && !progress.stars[String(i + 1)] && skipsLeft() > 0;
 
 // ---------- State ----------
@@ -824,7 +827,7 @@ function skipLevel() {
   if (!canSkip(levelIndex)) return;
   const n = levelIndex + 1;
   if (!progress.skipped.includes(n)) progress.skipped.push(n);
-  progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, n + 1));
+  if (levelIndex < progress.unlocked) progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, n + 1));
   save();
   startLevel(levelIndex + 1);
 }
@@ -865,7 +868,7 @@ function win(kept) {
   const isBest = prevBest == null || time < prevBest;
   if (isBest) progress.best[key] = time;
   progress.stars[key] = Math.max(progress.stars[key] || 0, n);
-  progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, levelIndex + 2));
+  if (levelIndex < progress.unlocked) progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, levelIndex + 2)); // an early-opened colour level opens nothing
   // clearing a level that was skipped earlier gives its skip back
   const skipBack = progress.skipped.includes(levelIndex + 1);
   if (skipBack) progress.skipped = progress.skipped.filter(s => s !== levelIndex + 1);
@@ -936,7 +939,7 @@ function buildGrid(world) {
   WORLDS.forEach((name, w) => {
     const b = document.createElement('button');
     b.className = 'world';
-    b.disabled = w * 10 + 1 > progress.unlocked;
+    b.disabled = !isOpen(w * 10);
     b.setAttribute('aria-pressed', String(w === menuWorld));
     let st = 0;
     for (let i = w * 10; i < w * 10 + 10; i++) st += progress.stars[String(i + 1)] || 0;
@@ -949,7 +952,7 @@ function buildGrid(world) {
     if (Math.floor(i / 10) !== menuWorld) return;
     const b = document.createElement('button');
     b.className = 'lvl' + (i === levelIndex ? ' current' : '');
-    b.disabled = i + 1 > progress.unlocked;
+    b.disabled = !isOpen(i);
     const st = progress.stars[String(i + 1)] || 0;
     const skipped = progress.skipped.includes(i + 1);
     b.innerHTML = `${i + 1}<small>${st ? '★'.repeat(st) : skipped ? '↷' : '&nbsp;'}</small>`;
@@ -992,7 +995,7 @@ $('btn-menu').addEventListener('click', openMenu);
 // those levels, since only they have colours. Both buttons switch the same setting.
 function updateSymbolsToggle() {
   const menu = $('symbols-toggle'), hud = $('symbols-hud');
-  menu.hidden = progress.unlocked <= 60;
+  menu.hidden = !isOpen(LAST_CLASSIC + 1);
   hud.hidden = !(level.gates || level.dyes);
   for (const b of [menu, hud]) {
     b.setAttribute('aria-pressed', String(showSymbols));
