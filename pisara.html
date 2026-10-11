@@ -224,7 +224,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
 //   a corner gap is two entries (one per side) that both name the corner, e.g. 'tr'.
 //   Default (see makeGaps): none in Kaste, then open corners first and gaps along the sides later.
 const R = (r, list) => list.map(([x, y]) => [x, y, r]);
-const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi', 'Vesivärit'];
+const PISARA_WORLDS = ['Kaste', 'Sadekuuro', 'Helle', 'Sammal', 'Ukkonen', 'Lampi', 'Vesivärit', 'Hunaja'];
 const PISARA_LEVELS = [
   // ----- Kaste -----
   { name: 'Ensimmäinen kosketus', maxLoss: 0.30, par: 6,  drops: [[30, 45, 5], [70, 115, 5]] },
@@ -443,10 +443,49 @@ const PISARA_LEVELS = [
     dyes: [[30, 5, 6, 'R'], [70, 5, 6, 'B'], [55, 50, 6, 'R'], [15, 50, 6, 'Y']], rinses: [[94, 60, 6]],
     drains: [[30, 112, 4]], suns: [[70, 118, 7]],
     drops: [...R(3.5, [[15, 10], [85, 10]]), ...R(4, [[20, 140], [80, 145]])] },
+
+  // ----- Hunaja: honeycombs make a drop sticky (slow, no bounce, no splitting, clings over holes) -----
+  // honey: [x, y, r] a honeycomb; a rinse pool washes the honey off too. Honey spreads when drops merge.
+  // A slow honeyed drop lets a clean one catch up with it in the open, where no wall would hold either,
+  // and a honeyed drop crosses a hole that would swallow a clean one.
+  // Intended solutions: 71: A   72: V Y   73: A V O   74: Y O   75: A V   76: A V   77: A V A (rinse before the sun)
+  //   78: V O A O   79: V A O A   80: V O A V A V A
+  { name: 'Kenno', maxLoss: 0.3, par: 15, gaps: [],
+    walls: [[0, 78, 42, 5], [58, 78, 42, 5]], drains: [[50, 80.5, 6.5]], honey: [[50, 45, 6]],
+    drops: [[50, 20, 4], [50, 140, 4]] },
+  { name: 'Kiinniotto', maxLoss: 0.3, par: 15, gaps: [['t', -3, 103], ['b', -3, 103]],
+    honey: [[25, 40, 6]], drops: [[50, 40, 4], [50, 120, 4]] },
+  { name: 'Tahmea silta', maxLoss: 0.25, par: 25, gaps: [],
+    walls: [[0, 78, 20, 5], [32, 78, 36, 5], [80, 78, 20, 5]], drains: [[26, 80.5, 6.5], [74, 80.5, 6.5]],
+    honey: [[26, 40, 6], [74, 40, 6]], drops: [[26, 15, 3.5], [74, 15, 3.5], [50, 140, 4.5]] },
+  { name: 'Ohitus', maxLoss: 0.3, par: 20, gaps: [['l', -3, 163], ['r', -3, 163]],
+    honey: [[70, 60, 6]], drops: [[20, 60, 4], [70, 130, 4]] },
+  { name: 'Pesu', maxLoss: 0.3, par: 20, gaps: [['l', -3, 163], ['t', -3, 103], ['r', -3, 163]],
+    honey: [[35, 40, 6], [75, 100, 6]], rinses: [[75, 140, 6]], drops: [[35, 40, 4], [75, 100, 4]] },
+  { name: 'Ankkuri', maxLoss: 0.25, par: 25, gaps: [['l', 85, 163], ['r', 85, 163]],
+    walls: [[0, 78, 42, 5], [58, 78, 42, 5]], drains: [[50, 80.5, 6.5]], honey: [[50, 50, 6]],
+    drops: [[50, 20, 4], [65, 140, 4], [85, 140, 4]] },
+  { name: 'Paahde', maxLoss: 0.1, par: 25, gaps: [],
+    walls: [[0, 60, 42, 5], [58, 60, 42, 5]], drains: [[50, 62.5, 6.5]], honey: [[50, 35, 6]],
+    rinses: [[12, 75, 7], [12, 89, 7]],
+    suns: [[8, 115, 11], [30, 115, 11], [52, 115, 11], [74, 115, 11], [96, 115, 11], [19, 136, 11], [41, 136, 11], [63, 136, 11], [85, 136, 11]],
+    drops: [[50, 12, 4], [50, 155, 4]] },
+  { name: 'Vihreä hunaja', maxLoss: 0.25, par: 25, gaps: [],
+    walls: [[0, 92, 86, 14]], drains: [[93, 99, 8]], gates: [[0, 50, 100, 5, 'G']],
+    dyes: [[6, 15, 6, 'Y'], [94, 15, 6, 'B']], honey: [[94, 75, 6]],
+    drops: [[50, 15, 4], [50, 145, 4.5]] },
+  { name: 'Kaksi kerrosta', maxLoss: 0.2, par: 30, gaps: [],
+    walls: [[14, 50, 86, 12], [0, 105, 86, 12]], drains: [[7, 56, 8], [93, 111, 8]], honey: [[7, 30, 6]],
+    drops: [[50, 15, 4], [50, 85, 4], [50, 150, 4]] },
+  { name: 'Hunajapurkki', maxLoss: 0.12, par: 35, gaps: [],
+    walls: [[0, 75, 42, 12], [58, 75, 42, 12]], drains: [[50, 81, 8]], gates: [[0, 35, 100, 5, 'G']],
+    dyes: [[6, 12, 6, 'Y'], [94, 12, 6, 'B']], honey: [[94, 57, 6]], rinses: [[12, 96, 7], [12, 109, 7]],
+    suns: [[9, 126, 10], [31, 126, 10], [53, 126, 10], [75, 126, 10], [97, 126, 10], [20, 144, 10], [42, 144, 10], [64, 144, 10], [86, 144, 10]],
+    drops: [[50, 12, 4], [50, 155, 4.5]] },
 ];
 
 // English names, in the same order as PISARA_WORLDS and PISARA_LEVELS
-const PISARA_WORLDS_EN = ['Dew', 'Rain Shower', 'Heatwave', 'Moss', 'Thunder', 'Pond', 'Watercolours'];
+const PISARA_WORLDS_EN = ['Dew', 'Rain Shower', 'Heatwave', 'Moss', 'Thunder', 'Pond', 'Watercolours', 'Honey'];
 const PISARA_LEVEL_NAMES_EN = [
   'First Touch', 'Three Dewdrops', 'Four Corners', 'The Divide', 'Hole in the Leaf',
   'Maze', 'Holey Leaf', 'Narrow Corridors', 'Grow First', 'Storm',
@@ -462,6 +501,7 @@ const PISARA_LEVEL_NAMES_EN = [
   'Bottleneck', 'Double Labyrinth', 'Trial by Fire', 'Dark Pond', 'The Last Drop',
   'First Colour', 'Two Colours', 'Green', 'Orange and Purple', 'Rinse',
   'Fetch', 'Two Gates', 'Colours and Holes', 'Three Mixes', 'Rainbow',
+  'Honeycomb', 'Catch-up', 'Sticky Bridge', 'Overtaking', 'Wash', 'Anchor', 'Scorching Sun', 'Green Honey', 'Two Floors', 'Honey Jar',
 ];
 </script>
 <script>
@@ -478,6 +518,7 @@ const LEVELS = PISARA_LEVELS, WORLDS = PISARA_WORLDS;
 // drop of exactly its colour.
 const PIGMENT = { R: 1, Y: 2, B: 4, O: 3, G: 6, P: 5 };
 const MUD = 7;
+const HONEY_RGB = '214, 132, 26';
 const COLOUR_RGB = { 1: '226, 72, 62', 2: '242, 200, 56', 4: '58, 123, 224', 3: '240, 138, 44', 6: '63, 174, 90', 5: '142, 90, 214', 7: '122, 90, 58' };
 
 // ---------- Language ----------
@@ -575,6 +616,8 @@ const EVAP_RATE = 0.16;    // radius units per second
 const SUN_RATE = 0.3;      // radius units per second while a drop sits in a sun spot
 const MOSS_DRAG = 5;       // extra velocity decay per second in moss
 const MOSS_GRIP = 3;       // moss holds drops this many times harder
+const HONEY_DRAG = 6;      // extra velocity decay per second for a honeyed drop
+const HONEY_GRIP = 3;      // honey holds a drop this many times harder
 const SENSITIVITY = 2.3;   // ~26° of tilt = full tilt
 
 // ---------- DOM ----------
@@ -597,7 +640,7 @@ const skipsLeft = () => SKIPS - progress.skipped.length;
 // a level can be skipped while it is not cleared yet
 // level 60 closes the original 60 levels; its clear screen says so (Vesivärit opens like any next level)
 const LAST_CLASSIC = 59;
-// for now the Vesivärit levels (61–70) are open to everyone for testing; set to false to lock them behind level 60 again
+// for now the levels after 60 (Vesivärit, Hunaja) are open to everyone for testing; set to false to lock them again
 const COLOURS_OPEN = true;
 const isOpen = i => i + 1 <= progress.unlocked || (COLOURS_OPEN && i > LAST_CLASSIC);
 const canSkip = i => i < LEVELS.length - 1 && !progress.stars[String(i + 1)] && skipsLeft() > 0;
@@ -734,7 +777,7 @@ function buzz(ms) { if (simMode) return; try { navigator.vibrate && navigator.vi
 
 // ---------- Level flow ----------
 function makeDrop(x, y, r, c = 0) {
-  return { x, y, r, c, vx: 0, vy: 0, ex: 0, ey: 0, evx: 0, evy: 0, fall: null, cool: 0, splitCool: 0 };
+  return { x, y, r, c, h: 0, vx: 0, vy: 0, ex: 0, ey: 0, evx: 0, evy: 0, fall: null, cool: 0, splitCool: 0 };
 }
 
 function loadDrops() {
@@ -1076,13 +1119,14 @@ function hit(d, nx, ny) {
   const vn = d.vx * nx + d.vy * ny;
   if (vn >= 0) return;
   const impact = -vn;
-  d.vx -= (1 + RESTITUTION) * vn * nx; d.vy -= (1 + RESTITUTION) * vn * ny;
+  const e = d.h ? 0 : RESTITUTION;   // honey does not bounce
+  d.vx -= (1 + e) * vn * nx; d.vy -= (1 + e) * vn * ny;
   // squash flat against the surface
   const a2 = 2 * Math.atan2(ny, nx);
   const kick = impact * 0.1;
   d.evx -= Math.cos(a2) * kick; d.evy -= Math.sin(a2) * kick;
   if (impact > 28) buzz(Math.min(25, impact / 5));
-  if (impact > SPLIT_SPEED && d.r > 2.6 && d.splitCool <= 0) split(d, nx, ny, impact);
+  if (impact > SPLIT_SPEED && d.r > 2.6 && d.splitCool <= 0 && !d.h) split(d, nx, ny, impact);
 }
 
 // a hard impact tears a small droplet off the rim
@@ -1095,6 +1139,7 @@ function split(d, nx, ny, impact) {
   const sgn = physRand() < 0.5 ? -1 : 1;
   const tx = -ny * sgn, ty = nx * sgn;
   const f = makeDrop(d.x + tx * (d.r + fr + 0.2) + nx * fr * 0.5, d.y + ty * (d.r + fr + 0.2) + ny * fr * 0.5, fr, d.c);
+  f.h = d.h;
   f.vx = d.vx * 0.6 + tx * impact * 0.45 + nx * impact * 0.25;
   f.vy = d.vy * 0.6 + ty * impact * 0.45 + ny * impact * 0.25;
   f.cool = 0.4;
@@ -1197,13 +1242,17 @@ function step(dt) {
       if ((d.c | PIGMENT[col]) !== d.c && Math.hypot(d.x - px, d.y - py) < pr) { d.c |= PIGMENT[col]; colourSplash(d); }
     }
     for (const [px, py, pr] of (level.rinses || [])) {
-      if (d.c && Math.hypot(d.x - px, d.y - py) < pr) { d.c = 0; colourSplash(d); }
+      if ((d.c || d.h) && Math.hypot(d.x - px, d.y - py) < pr) { d.c = 0; d.h = 0; colourSplash(d); }
+    }
+    // a honeycomb makes the drop sticky: slow, no bounce, no splitting, and it clings over holes
+    for (const [px, py, pr] of (level.honey || [])) {
+      if (!d.h && Math.hypot(d.x - px, d.y - py) < pr) { d.h = 1; colourSplash(d); }
     }
     const inMoss = (level.moss || []).some(m => inRect(d, m));
 
     let fx = ax, fy = ay;
     for (const [hx, hy, hr] of (level.drains || [])) {
-      if (d.r >= hr) continue;                 // too big to fall through: rolls over the hole
+      if (d.r >= hr || d.h) continue;         // too big to fall through, or honeyed: clings and rolls over the hole
       const dx = hx - d.x, dy = hy - d.y, dist = Math.hypot(dx, dy);
       const reach = hr + d.r * 0.8;
       if (dist < hr * 0.55) { d.fall = [hx, hy]; d.vx = d.vy = 0; loss.drain += vol(d); plip(d.r * 1.8, 0.08); buzz(60); break; }
@@ -1212,18 +1261,20 @@ function step(dt) {
     if (d.fall) continue;
 
     const speed = Math.hypot(d.vx, d.vy);
-    const grip = STICK / d.r * (inMoss ? MOSS_GRIP : 1);
+    const grip = STICK / d.r * (inMoss ? MOSS_GRIP : 1) * (d.h ? HONEY_GRIP : 1);
     const pinned = speed < 1.2 && Math.hypot(fx, fy) < grip && amag < grip;
     if (pinned) { d.vx = 0; d.vy = 0; }
     else {
       d.vx += fx * dt; d.vy += fy * dt;
       // viscous drag is relatively stronger for small drops
-      const k = Math.exp(-(0.9 + 3 / d.r + (inMoss ? MOSS_DRAG : 0)) * dt);
+      const k = Math.exp(-(0.9 + 3 / d.r + (inMoss ? MOSS_DRAG : 0) + (d.h ? HONEY_DRAG : 0)) * dt);
       d.vx *= k; d.vy *= k;
       const sp = Math.hypot(d.vx, d.vy);
       if (sp > MAX_SPEED) { d.vx *= MAX_SPEED / sp; d.vy *= MAX_SPEED / sp; }
       d.x += d.vx * dt; d.y += d.vy * dt;
       collideWalls(d);
+      // a honeyed drop leaves a thin, fading smear behind it
+      if (d.h && !simMode && Math.random() < dt * 30) splashes.push({ trail: true, x: d.x, y: d.y, vx: 0, vy: 0, r: d.r * 0.3, life: 1.2 });
     }
 
     // shape: rolling drops elongate slightly along their path, then wobble back
@@ -1254,6 +1305,7 @@ function step(dt) {
           a.vx = (a.vx * ma + b.vx * mb) / m; a.vy = (a.vy * ma + b.vy * mb) / m;
           a.r = Math.cbrt(m);
           a.c |= b.c;   // pigments mix
+          a.h = a.h || b.h;   // and honey spreads
           // the fresh drop starts stretched along the line that joined them and rings
           const share = Math.min(ma, mb) / m;
           const a2 = 2 * Math.atan2(dy, dx), amt = 0.12 + share * 0.5;
@@ -1289,7 +1341,9 @@ function step(dt) {
     } else {
       const big = alive.filter(d => d.r >= EVAP_R);
       const falling = drops.some(d => d.fall);
-      if (big.length === 1 && !falling) {
+      // a drop that just formed over a hole it is about to fall into has not won yet
+      const overHole = d => !d.h && (level.drains || []).some(([hx, hy, hr]) => d.r < hr && Math.hypot(d.x - hx, d.y - hy) < hr * 0.55);
+      if (big.length === 1 && !falling && !overHole(big[0])) {
         const kept = vol(big[0]) / V0;   // splash droplets still on the leaf count as lost
         if (kept >= need() - 1e-6) win(kept);
       }
@@ -1312,7 +1366,7 @@ function spawnSplash(d, share) {
 function colourSplash(d) {
   for (let i = 0; i < 7; i++) {
     const a = Math.random() * Math.PI * 2, v = 8 + Math.random() * 14;
-    splashes.push({ x: d.x + Math.cos(a) * d.r, y: d.y + Math.sin(a) * d.r, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 0.4 + Math.random() * 0.5, life: 0.35 + Math.random() * 0.2, c: d.c });
+    splashes.push({ x: d.x + Math.cos(a) * d.r, y: d.y + Math.sin(a) * d.r, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 0.4 + Math.random() * 0.5, life: 0.35 + Math.random() * 0.2, c: d.c, h: d.h });
   }
   plip(d.r * 0.8, 0.07);
 }
@@ -1508,6 +1562,19 @@ function renderBg() {
     c.fillStyle = rg2;
     c.beginPath(); c.arc(px, py, pr, 0, Math.PI * 2); c.fill();
   }
+  // honeycombs: a hexagonal comb of amber cells, glossy in the middle
+  const hex = (x, y, r) => { c.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; c.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); } c.closePath(); };
+  for (const [px, py, pr] of (level.honey || [])) {
+    const hg2 = c.createRadialGradient(px - pr * 0.25, py - pr * 0.3, 0, px, py, pr);
+    hg2.addColorStop(0, `rgba(${HONEY_RGB}, 0.95)`); hg2.addColorStop(1, `rgba(${HONEY_RGB}, 0.75)`);
+    hex(px, py, pr); c.fillStyle = hg2; c.fill();
+    c.strokeStyle = 'rgba(120, 66, 10, 0.9)'; c.lineWidth = 0.45; c.stroke();
+    // seven cells: one in the middle, six around it
+    const cr = pr * 0.3, cd = cr * Math.sqrt(3) * 1.05;
+    c.strokeStyle = 'rgba(255, 214, 120, 0.75)'; c.lineWidth = 0.3;
+    hex(px, py, cr); c.stroke();
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; hex(px + cd * Math.cos(a), py + cd * Math.sin(a), cr); c.stroke(); }
+  }
   // coloured gates: a tinted, see-through membrane carrying the symbols of its pigments
   for (const [gx, gy, gw, gh, col] of (level.gates || [])) {
     const rgb = COLOUR_RGB[PIGMENT[col]], rr = wallRadius(gw, gh);
@@ -1573,6 +1640,12 @@ function drawDrop(c, d) {
   c.fillStyle = 'rgba(215, 240, 255, 0.10)'; c.fillRect(-R, -R, R * 2, R * 2);
   // dyed water: the pigment tints the whole bead, the leaf still shows through
   if (d.c) { c.fillStyle = `rgba(${COLOUR_RGB[d.c]}, 0.5)`; c.fillRect(-R, -R, R * 2, R * 2); }
+  // honey: a deep amber, darker towards the rim like a bead of syrup
+  if (d.h) {
+    const hg = c.createRadialGradient(-R * 0.2, -R * 0.25, 0, 0, 0, R);
+    hg.addColorStop(0, `rgba(${HONEY_RGB}, 0.35)`); hg.addColorStop(1, 'rgba(120, 62, 8, 0.75)');
+    c.fillStyle = hg; c.fillRect(-R, -R, R * 2, R * 2);
+  }
   // transmitted light pooling on the side away from the sun
   const tg = c.createRadialGradient(R * 0.32, R * 0.4, 0, R * 0.32, R * 0.4, R * 0.75);
   tg.addColorStop(0, 'rgba(240, 255, 225, 0.38)'); tg.addColorStop(1, 'rgba(240, 255, 225, 0)');
@@ -1589,7 +1662,9 @@ function drawDrop(c, d) {
   c.restore();
 
   c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2);
-  c.strokeStyle = 'rgba(8, 35, 22, 0.5)'; c.lineWidth = Math.max(0.6, R * 0.035); c.stroke();
+  if (d.h) { c.strokeStyle = 'rgba(232, 160, 40, 0.95)'; c.lineWidth = Math.max(1.2, R * 0.09); }   // a thick golden rim
+  else { c.strokeStyle = 'rgba(8, 35, 22, 0.5)'; c.lineWidth = Math.max(0.6, R * 0.035); }
+  c.stroke();
 
   // specular highlight of the sun
   const hx = -R * 0.38, hy = -R * 0.42;
@@ -1643,6 +1718,14 @@ function draw(t) {
   ctx.drawImage(bg, 0, 0);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+  // the sticky smear honeyed drops leave on the leaf, under the drops
+  for (const p of splashes) {
+    if (!p.trail) continue;
+    ctx.globalAlpha = Math.max(0, p.life / 1.2) * 0.35;
+    ctx.beginPath(); ctx.arc(ox + p.x * s, oy + p.y * s, Math.max(0.8, p.r * s), 0, Math.PI * 2);
+    ctx.fillStyle = `rgb(${HONEY_RGB})`; ctx.fill();
+  }
+  ctx.globalAlpha = 1;
   for (const d of drops) {
     ctx.globalAlpha = d.fall ? Math.min(1, d.r / 2) : d.r < EVAP_R ? Math.min(1, d.r / EVAP_R + 0.2) : 1;
     drawShadow(ctx, d);
@@ -1667,6 +1750,7 @@ function draw(t) {
   }
 
   for (const p of splashes) {
+    if (p.trail) continue;
     const px = ox + p.x * s, py = oy + p.y * s, pr = Math.max(0.8, p.r * s);
     if (p.steam) {
       ctx.globalAlpha = Math.max(0, Math.min(0.35, p.life * 0.4));
@@ -1676,7 +1760,7 @@ function draw(t) {
     }
     ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2.5));
     ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI * 2);
-    ctx.fillStyle = p.c ? `rgba(${COLOUR_RGB[p.c]}, 0.75)` : 'rgba(200, 235, 245, 0.55)'; ctx.fill();
+    ctx.fillStyle = p.h ? `rgba(${HONEY_RGB}, 0.8)` : p.c ? `rgba(${COLOUR_RGB[p.c]}, 0.75)` : 'rgba(200, 235, 245, 0.55)'; ctx.fill();
     ctx.beginPath(); ctx.arc(px - pr * 0.35, py - pr * 0.35, pr * 0.35, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fill();
   }
@@ -1747,7 +1831,7 @@ if (window.PISARA_TEST) {
     },
     info: () => ({
       state, time, remaining, need: need(), loss: Object.assign({}, loss),
-      drops: drops.filter(d => !d.fall && d.r >= EVAP_R).map(d => [d.x, d.y, d.r, d.c]),
+      drops: drops.filter(d => !d.fall && d.r >= EVAP_R).map(d => [d.x, d.y, d.r, d.c, d.h]),
     }),
     show() { updateHud(); },
     // show the game's own result screen for a cleared level (used by the screenshot tool)

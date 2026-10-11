@@ -20,6 +20,10 @@ Jokaisella tasolla on raja sille, paljonko vedestä saa menettää. Vettä menee
 
 Kun taso 60 on läpi, avautuu seitsemäs maailma Vesivärit (tasot 61–70). Siinä värilliset portit päästävät läpi vain samanvärisen pisaran. Pisarat värjäytyvät väripisteistä (punainen, keltainen, sininen), ja portin värin saa vain sekoittamalla: keltainen + sininen = vihreä, punainen + keltainen = oranssi, punainen + sininen = violetti, ja kaikki kolme tekevät kurasta, joka ei pääse minkään portin läpi. Kirkas vesipiste huuhtelee värin pois. Värisymbolit (punainen ▲, keltainen ●, sininen ■) saa näkyviin ▲●■-napista valikosta tai väritasoilla pelinäkymästä.
 
+Kahdeksas maailma Hunaja (tasot 71–80) tuo kuusikulmaiset hunajakennot. Kennon läpi kulkenut pisara muuttuu tahmeaksi: se liikkuu hitaasti, ei kimpoa eikä halkea ja pysyy reiän päällä putoamatta. Hunaja leviää yhdistyessä, ja huuhtelupiste pesee sen pois. Hitaan pisaran kiinni saa nopealla pisaralla keskellä lehteä, missä mikään seinä ei pysäyttäisi kumpaakaan.
+
+Väri- ja hunajatasot ovat toistaiseksi auki kaikille testausta varten (`COLOURS_OPEN` tiedostossa `pisara.html`).
+
 ## Tiedostot
 
 - `index.html` – koko peli yhdessä tiedostossa (GitHub Pages näyttää tämän).

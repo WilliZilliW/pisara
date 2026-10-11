@@ -58,7 +58,7 @@
   function mst(L, drops) {
     const n = drops.length;
     if (n < 2) return 0;
-    const f = drops.map(([x, y, r]) => field(blockedGrid(L, r), x, y));
+    const f = drops.map(([x, y, r, , h]) => field(blockedGrid(L, h ? 99 : r), x, y));   // honey clings over holes
     const inTree = new Array(n).fill(false), best = new Array(n).fill(Infinity);
     best[0] = 0; let total = 0;
     for (let k = 0; k < n; k++) {
@@ -134,7 +134,7 @@
     return info.remaining * 2000 - spread * 3 - info.drops.length * 40;
   }
   // coarse fingerprint of a position, so the beam does not fill with near-identical states
-  const key = info => info.drops.map(([x, y, r, c]) => `${Math.round(x / 3)},${Math.round(y / 3)},${Math.round(r * 2)},${c || 0}`).sort().join('|');
+  const key = info => info.drops.map(([x, y, r, c, h]) => `${Math.round(x / 3)},${Math.round(y / 3)},${Math.round(r * 2)},${c || 0},${h || 0}`).sort().join('|');
 
   // yield to the browser; a MessageChannel is not throttled the way timers are in a hidden tab
   const channel = new MessageChannel(), waiting = [];
