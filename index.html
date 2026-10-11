@@ -593,7 +593,7 @@ const STRINGS = {
     drops: n => n + (n === 1 ? ' pisara' : ' pisaraa'),
     water: 'Vettä', limit: 'raja', waterAria: 'Vettä jäljellä',
     menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', symbolsAria: 'Värisymbolit (avuksi värien tunnistamiseen)',
-    lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 60 tasoa kuudessa maailmassa.',
+    lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 90 tasoa yhdeksässä maailmassa.',
     how: [
       ['Puhelin', 'kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.'],
       [IN_APP ? 'Kosketus' : 'Kosketus tai hiiri', 'paina ruutua siihen suuntaan, johon haluat kallistaa.'],
@@ -625,7 +625,7 @@ const STRINGS = {
     drops: n => n + (n === 1 ? ' drop' : ' drops'),
     water: 'Water', limit: 'limit', waterAria: 'Water left',
     menuAria: 'Level menu', restartAria: 'Restart level', symbolsAria: 'Colour symbols (help telling colours apart)',
-    lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 60 levels in six worlds.',
+    lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 90 levels in nine worlds.',
     how: [
       ['Phone', 'tilt it. The way you hold the phone when a level starts counts as flat.'],
       [IN_APP ? 'Touch' : 'Touch or mouse', 'press the screen in the direction you want to tilt.'],
@@ -692,7 +692,7 @@ function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress))
 const SKIPS = 3;
 const skipsLeft = () => SKIPS - progress.skipped.length;
 // a level can be skipped while it is not cleared yet
-// level 60 closes the original 60 levels; its clear screen says so (Vesivärit opens like any next level)
+// level 60 closes the original 60 levels; the worlds after it open from there
 const LAST_CLASSIC = 59;
 // for now the levels after 60 (Vesivärit, Hunaja, Monsuuni) are open to everyone for testing; set to false to lock them again
 const COLOURS_OPEN = true;
@@ -975,7 +975,7 @@ function win(kept) {
 
   const last = levelIndex === LEVELS.length - 1;
   $('res-eyebrow').textContent = T().level(levelIndex + 1) + ' · ' + levelName(levelIndex);
-  $('res-title').textContent = last || levelIndex === LAST_CLASSIC ? T().allCleared : T().oneDrop;
+  $('res-title').textContent = last ? T().allCleared : T().oneDrop;
   $('res-facts').innerHTML =
     `<div><b>${pct(kept)}</b><span>${T().waterLeftLimit(pct(kept), pct(need()))}</span></div>` +
     `<div><b>${fmt(time)}</b><span>${isBest ? T().newBest : T().best(fmt(prevBest))}</span></div>` +
