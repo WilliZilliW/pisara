@@ -11,7 +11,7 @@ Otsosoftin selainpeli, jossa vesipisaroita liikutellaan lotuksenlehdellä puheli
 ## Pelaaminen
 
 - **Puhelin:** kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.
-- **Kosketus tai hiiri:** paina ruutua siihen suuntaan, johon haluat kallistaa.
+- **Kosketus tai hiiri:** paina ruutua siihen suuntaan, johon haluat kallistaa. Puhelimen kallistusohjauksen saa pois vesimittarin vieressä olevasta puhelinnapista, jolloin pisaroita ohjataan pelkällä kosketuksella.
 - **Näppäimistö:** nuolinäppäimet, R aloittaa tason alusta.
 
 Peli on suomeksi ja englanniksi. Kieli valitaan laitteen kielen mukaan, ja sen voi vaihtaa valikon oikeasta yläkulmasta (FI · EN).

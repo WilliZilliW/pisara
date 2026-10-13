@@ -108,6 +108,11 @@ body {
 /* colour symbols toggle: dim while off, bright while on */
 .lang.symbols { letter-spacing: 0.15em; font-size: 11px; }
 .lang.symbols[aria-pressed="true"] { opacity: 1; color: var(--ink); }
+/* tilt control toggle: a phone, struck through while tilting is off */
+.lang.tilt { display: grid; place-items: center; padding: 4px; }
+.lang.tilt svg { width: 18px; height: 18px; display: block; }
+.lang.tilt[aria-pressed="true"] { opacity: 1; color: var(--ink); }
+.lang.tilt[aria-pressed="true"] .tilt-off { display: none; }
 .lang:focus-visible { opacity: 1; outline: 2px solid var(--sun); outline-offset: 1px; }
 .lead { margin: 0; color: var(--muted); line-height: 1.5; }
 h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; line-height: 1.1; text-wrap: balance; }
@@ -189,6 +194,9 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
       <div class="meter-mark" id="meter-mark"></div>
     </div>
     <button type="button" class="lang symbols" id="symbols-hud" aria-pressed="false" hidden>▲●■</button>
+    <button type="button" class="lang tilt" id="tilt-toggle" aria-pressed="true" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="9" height="16" rx="2" transform="rotate(-14 12.5 11)"/><path d="M3 9.5c-.6 1.6-.6 3.4 0 5M21 9.5c.6 1.6.6 3.4 0 5"/><path class="tilt-off" d="M4 3l17 18"/></svg>
+    </button>
   </div>
 </header>
 
@@ -592,7 +600,7 @@ const STRINGS = {
     level: n => `Taso ${n}`,
     drops: n => n + (n === 1 ? ' pisara' : ' pisaraa'),
     water: 'Vettä', limit: 'raja', waterAria: 'Vettä jäljellä',
-    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', symbolsAria: 'Värisymbolit (avuksi värien tunnistamiseen)',
+    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', symbolsAria: 'Värisymbolit (avuksi värien tunnistamiseen)', tiltAria: 'Kallistusohjaus (pois päältä ohjaat koskettamalla)',
     lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 90 tasoa yhdeksässä maailmassa.',
     how: [
       ['Puhelin', 'kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.'],
@@ -624,7 +632,7 @@ const STRINGS = {
     level: n => `Level ${n}`,
     drops: n => n + (n === 1 ? ' drop' : ' drops'),
     water: 'Water', limit: 'limit', waterAria: 'Water left',
-    menuAria: 'Level menu', restartAria: 'Restart level', symbolsAria: 'Colour symbols (help telling colours apart)',
+    menuAria: 'Level menu', restartAria: 'Restart level', symbolsAria: 'Colour symbols (help telling colours apart)', tiltAria: 'Tilt control (when off, steer by touch)',
     lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 90 levels in nine worlds.',
     how: [
       ['Phone', 'tilt it. The way you hold the phone when a level starts counts as flat.'],
@@ -740,7 +748,7 @@ function screenAngle() {
 
 window.addEventListener('deviceorientation', e => {
   if (e.beta == null || e.gamma == null) return;
-  if (!sensor.ok) { sensor.ok = true; sensor.cal = { b: e.beta, g: e.gamma }; hideToast(); }
+  if (!sensor.ok) { sensor.ok = true; sensor.cal = { b: e.beta, g: e.gamma }; hideToast(); updateTiltToggle(); }
   sensor.raw = { b: e.beta, g: e.gamma };
   const db = (e.beta - sensor.cal.b) * Math.PI / 180;
   const dg = (e.gamma - sensor.cal.g) * Math.PI / 180;
@@ -753,6 +761,16 @@ window.addEventListener('deviceorientation', e => {
   if (Math.hypot(t.x, t.y) < 0.03) { t.x = 0; t.y = 0; }
   sensor.t = t;
 });
+
+// Tilt control can be switched off, e.g. to play lying down: the drops then follow touch only.
+const TILT_KEY = 'pisara-kallistus';
+let tiltOn = (() => { try { return localStorage.getItem(TILT_KEY) !== '0'; } catch (e) { return true; } })();
+function updateTiltToggle() {
+  const b = $('tilt-toggle');
+  b.hidden = !sensor.ok;   // only on a device that reports its tilt
+  b.setAttribute('aria-pressed', String(tiltOn));
+  b.setAttribute('aria-label', T().tiltAria);
+}
 
 function calibrate() {
   if (sensor.raw && Math.abs(sensor.raw.b) < 75) sensor.cal = { b: sensor.raw.b, g: sensor.raw.g };
@@ -788,7 +806,7 @@ function readTilt() {
   if (keys.size) {
     return clampLen({ x: (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0), y: (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0) });
   }
-  if (sensor.ok) return sensor.t;
+  if (sensor.ok && tiltOn) return sensor.t;
   return { x: 0, y: 0 };
 }
 
@@ -1107,10 +1125,17 @@ const toggleSymbols = () => {
 };
 $('symbols-toggle').addEventListener('click', toggleSymbols);
 $('symbols-hud').addEventListener('click', toggleSymbols);
+$('tilt-toggle').addEventListener('click', () => {
+  tiltOn = !tiltOn;
+  try { localStorage.setItem(TILT_KEY, tiltOn ? '1' : '0'); } catch (e) {}
+  if (tiltOn) calibrate();   // the way the phone is held now counts as level
+  updateTiltToggle();
+});
 
 function applyLang() {
   const s = T();
   updateSymbolsToggle();
+  updateTiltToggle();
   document.documentElement.lang = lang;
   $('btn-menu').setAttribute('aria-label', s.menuAria);
   $('btn-restart').setAttribute('aria-label', s.restartAria);
