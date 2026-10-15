@@ -24,7 +24,7 @@ Kahdeksas maailma Hunaja (tasot 71–80) tuo kuusikulmaiset hunajakennot. Kennon
 
 Yhdeksäs maailma Monsuuni (tasot 81–90) yhdistää kaiken aiemman: reiät, kohoumat, auringot, sammaleen, reuna-aukot, väriportit ja hunajan.
 
-Tasot 61–90 ovat toistaiseksi auki kaikille testausta varten (`COLOURS_OPEN` tiedostossa `pisara.html`).
+Tasot 61–90 avautuvat, kun taso 60 on läpäisty tai ohitettu. Testausta varten ne saa auki kaikille asettamalla `COLOURS_OPEN = true` tiedostossa `pisara.html`.
 
 ## Tiedostot
 

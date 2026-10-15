@@ -702,8 +702,8 @@ const skipsLeft = () => SKIPS - progress.skipped.length;
 // a level can be skipped while it is not cleared yet
 // level 60 closes the original 60 levels; the worlds after it open from there
 const LAST_CLASSIC = 59;
-// for now the levels after 60 (Vesivärit, Hunaja, Monsuuni) are open to everyone for testing; set to false to lock them again
-const COLOURS_OPEN = true;
+// true opens the levels after 60 (Vesivärit, Hunaja, Monsuuni) to everyone, for testing; false locks them behind level 60
+const COLOURS_OPEN = false;
 const isOpen = i => i + 1 <= progress.unlocked || (COLOURS_OPEN && i > LAST_CLASSIC);
 const canSkip = i => i < LEVELS.length - 1 && !progress.stars[String(i + 1)] && skipsLeft() > 0;
 
