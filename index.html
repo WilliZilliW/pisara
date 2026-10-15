@@ -104,6 +104,9 @@ body {
   background: none; border: 0; padding: 6px 4px; border-radius: 6px; cursor: pointer;
 }
 .lang:hover { opacity: 1; }
+/* privacy policy link at the foot of the menu */
+.foot { margin: 14px 0 0; text-align: center; font-size: 12px; }
+.foot a { color: var(--muted); }
 .corner-toggles { display: flex; align-items: center; gap: 6px; }
 /* colour symbols toggle: dim while off, bright while on */
 .lang.symbols { letter-spacing: 0.15em; font-size: 11px; }
@@ -215,6 +218,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 30px; margin: 0; 
     <div class="worlds" id="world-tabs"></div>
     <div class="grid" id="level-grid"></div>
     <div class="row"><button class="btn primary" id="btn-play">Pelaa</button></div>
+    <p class="foot"><a id="privacy-link" href="https://willizilliw.github.io/pisara/tietosuoja.html" target="_blank" rel="noopener">Tietosuoja</a></p>
   </div>
 </div>
 
@@ -600,7 +604,7 @@ const STRINGS = {
     level: n => `Taso ${n}`,
     drops: n => n + (n === 1 ? ' pisara' : ' pisaraa'),
     water: 'Vettä', limit: 'raja', waterAria: 'Vettä jäljellä',
-    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', symbolsAria: 'Värisymbolit (avuksi värien tunnistamiseen)', tiltAria: 'Kallistusohjaus (pois päältä ohjaat koskettamalla)',
+    menuAria: 'Tasovalikko', restartAria: 'Aloita taso alusta', symbolsAria: 'Värisymbolit (avuksi värien tunnistamiseen)', tiltAria: 'Kallistusohjaus (pois päältä ohjaat koskettamalla)', privacy: 'Tietosuoja',
     lead: 'Kallista lotuksenlehteä ja ohjaa vesipisarat yhteen. Taso on läpi, kun jäljellä on yksi pisara ja vettä on yhä vähintään tason rajan verran. 90 tasoa yhdeksässä maailmassa.',
     how: [
       ['Puhelin', 'kallista. Asento, jossa pidät puhelinta tason alkaessa, on suora.'],
@@ -632,7 +636,7 @@ const STRINGS = {
     level: n => `Level ${n}`,
     drops: n => n + (n === 1 ? ' drop' : ' drops'),
     water: 'Water', limit: 'limit', waterAria: 'Water left',
-    menuAria: 'Level menu', restartAria: 'Restart level', symbolsAria: 'Colour symbols (help telling colours apart)', tiltAria: 'Tilt control (when off, steer by touch)',
+    menuAria: 'Level menu', restartAria: 'Restart level', symbolsAria: 'Colour symbols (help telling colours apart)', tiltAria: 'Tilt control (when off, steer by touch)', privacy: 'Privacy policy',
     lead: 'Tilt the lotus leaf and guide the water drops together. A level is cleared when one drop is left and you still have at least the level’s limit of water. 90 levels in nine worlds.',
     how: [
       ['Phone', 'tilt it. The way you hold the phone when a level starts counts as flat.'],
@@ -1140,6 +1144,8 @@ function applyLang() {
   $('t-limit').textContent = s.limit;
   $('meter').setAttribute('aria-label', s.waterAria);
   const other = lang === 'fi' ? 'en' : 'fi';
+  $('privacy-link').textContent = s.privacy;
+  $('privacy-link').href = 'https://willizilliw.github.io/pisara/tietosuoja.html' + (lang === 'en' ? '#en' : '');
   $('lang-toggle').textContent = other.toUpperCase();
   $('lang-toggle').lang = other;
   $('lang-toggle').setAttribute('aria-label', other === 'en' ? 'In English' : 'Suomeksi');
