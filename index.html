@@ -622,6 +622,11 @@ const STRINGS = {
     next: 'Seuraava taso', retry: 'Uudelleen', playAgain: 'Pelaa uudelleen', tryAgain: 'Yritä uudelleen', levels: 'Tasot',
     skipAria: n => `Ohita taso (ohituksia jäljellä ${n})`, skipButton: n => `Ohita taso (${n})`,
     skipBack: (n, all) => `Ohitus palautui: ohituksia jäljellä ${n}/${all}.`, skippedAria: ', ohitettu',
+    buyAria: 'Ohitukset loppuivat: osta lisää', moreSkips: 'Osta ohituksia', shopEyebrow: 'Ohitukset',
+    shopTitle: 'Ohitukset loppuivat', cancel: 'Peruuta',
+    shopInfo: n => `Saat ${n} ohitusta. Ostettu ohitus käytetään kerran. Ilmaiset kolme ohitusta palautuvat edelleen, kun pelaat ohitetun tason läpi.`,
+    buyButton: (n, price) => `Osta ${n} ohitusta · ${price}`, bought: n => `${n} ohitusta lisätty`,
+    buyPending: 'Maksu on kesken. Ohitukset tulevat, kun maksu on valmis.', buyFailed: 'Osto ei onnistunut. Yritä myöhemmin uudelleen.',
     why: {
       drain: 'Pisara putosi reiästä läpi. Yhdistä pieniä pisaroita ensin, niin ne kasvavat reikää suuremmiksi ja vierivät yli.',
       evap: 'Roiskeet haihtuivat. Kallista loivemmin, niin pisarat eivät hajoa törmätessään, tai kerää pikkupisarat nopeasti talteen.',
@@ -654,6 +659,11 @@ const STRINGS = {
     next: 'Next level', retry: 'Retry', playAgain: 'Play again', tryAgain: 'Try again', levels: 'Levels',
     skipAria: n => `Skip level (${n} skips left)`, skipButton: n => `Skip level (${n})`,
     skipBack: (n, all) => `Skip returned: ${n} of ${all} skips left.`, skippedAria: ', skipped',
+    buyAria: 'Out of skips: buy more', moreSkips: 'Buy skips', shopEyebrow: 'Skips',
+    shopTitle: 'Out of skips', cancel: 'Cancel',
+    shopInfo: n => `You get ${n} skips. A bought skip is used once. The three free skips still come back when you clear a skipped level.`,
+    buyButton: (n, price) => `Buy ${n} skips · ${price}`, bought: n => `${n} skips added`,
+    buyPending: 'Payment pending. The skips arrive when the payment completes.', buyFailed: 'The purchase did not go through. Please try again later.',
     why: {
       drain: 'A drop fell through a hole. Merge small drops first, so they grow bigger than the hole and roll over it.',
       evap: 'Splashes evaporated. Tilt more gently so drops don’t break apart when they hit something, or collect the small droplets quickly.',
@@ -699,10 +709,16 @@ const SAVE_KEY = 'pisara-progress-v2';
 let progress = { unlocked: 1, best: {}, stars: {}, skipped: [] };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.unlocked) progress = Object.assign(progress, s); } catch (e) {}
 if (!Array.isArray(progress.skipped)) progress.skipped = [];
+// bought: skips bought in the Android app, each used once; paidSkipped: levels skipped with one (no skip comes back);
+// tokens: Google Play purchase tokens already turned into skips, so a purchase is never counted twice
+if (!(progress.bought >= 0)) progress.bought = 0;
+if (!Array.isArray(progress.paidSkipped)) progress.paidSkipped = [];
+if (!Array.isArray(progress.tokens)) progress.tokens = [];
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch (e) {} }
 
 const SKIPS = 3;
-const skipsLeft = () => SKIPS - progress.skipped.length;
+const freeSkipsLeft = () => Math.max(0, SKIPS - progress.skipped.length);
+const skipsLeft = () => freeSkipsLeft() + progress.bought;
 // a level can be skipped while it is not cleared yet
 // every level opens when the one before it is cleared or skipped
 const isOpen = i => i + 1 <= progress.unlocked;
@@ -942,7 +958,9 @@ function startLevel(i) {
 function skipLevel() {
   if (!canSkip(levelIndex)) return;
   const n = levelIndex + 1;
-  if (!progress.skipped.includes(n)) progress.skipped.push(n);
+  // the free skips go first: they come back when the level is cleared; a bought one is used up for good
+  if (freeSkipsLeft() > 0) { if (!progress.skipped.includes(n)) progress.skipped.push(n); }
+  else { progress.bought--; if (!progress.paidSkipped.includes(n)) progress.paidSkipped.push(n); }
   progress.unlocked = Math.min(LEVELS.length, Math.max(progress.unlocked, n + 1));
   save();
   startLevel(levelIndex + 1);
@@ -953,11 +971,96 @@ function updateSkip() {
   const b = $('btn-skip');
   const cleared = !!progress.stars[String(levelIndex + 1)];
   b.hidden = cleared || levelIndex >= LEVELS.length - 1;
-  b.disabled = skipsLeft() <= 0;
-  $('skip-count').textContent = skipsLeft();
-  b.setAttribute('aria-label', T().skipAria(skipsLeft()));
+  // out of skips: in the Android app the button offers more for sale, elsewhere it stays dimmed
+  const buy = skipsLeft() <= 0 && storeReady();
+  b.disabled = skipsLeft() <= 0 && !buy;
+  $('skip-count').textContent = buy ? '+' : skipsLeft();
+  b.setAttribute('aria-label', buy ? T().buyAria : T().skipAria(skipsLeft()));
 }
-$('btn-skip').addEventListener('click', () => { unlockAudio(); if (state === 'play' || state === 'failing') skipLevel(); });
+$('btn-skip').addEventListener('click', () => {
+  unlockAudio();
+  if (state !== 'play' && state !== 'failing') return;
+  if (skipsLeft() > 0) skipLevel(); else if (storeReady()) openShop();
+});
+
+// ---------- Skips for sale (Android app, Google Play Billing) ----------
+// One consumable product gives SHOP_SKIPS skips. A purchase is first written into the progress (keyed by its token),
+// then consumed, so a crash in between can only lead to it being found again and consumed, never counted twice.
+// Purchases left unconsumed (an interrupted purchase, or a pending payment that went through later) are picked up
+// when the app starts or comes back to the foreground.
+const SHOP_ID = 'ohitukset_3', SHOP_SKIPS = 3;
+const billing = IN_APP && window.Capacitor.Plugins && window.Capacitor.Plugins.NativePurchases;
+let shopProduct = null, shopBusy = false;
+const storeReady = () => !!(billing && shopProduct);
+
+function grantPurchase(t) {
+  if (!t || t.productIdentifier !== SHOP_ID || t.purchaseState !== '1' || !t.purchaseToken) return false;
+  if (progress.tokens.includes(t.purchaseToken)) return false;
+  progress.tokens = progress.tokens.concat(t.purchaseToken).slice(-50);
+  progress.bought += SHOP_SKIPS;
+  save();
+  updateSkip();
+  return true;
+}
+async function consume(t) {
+  try { await billing.consumePurchase({ purchaseToken: t.purchaseToken }); } catch (e) {}   // retried at the next start
+}
+async function recoverPurchases() {
+  if (!billing) return;
+  try {
+    const { purchases } = await billing.getPurchases({ productType: 'inapp' });
+    for (const t of purchases || []) {
+      if (t.productIdentifier !== SHOP_ID || t.purchaseState !== '1') continue;
+      if (grantPurchase(t)) showToast(T().bought(SHOP_SKIPS), 2500);
+      await consume(t);
+    }
+  } catch (e) {}
+}
+async function initShop() {
+  if (!billing) return;
+  try {
+    const { isBillingSupported } = await billing.isBillingSupported();
+    if (!isBillingSupported) return;
+    const { products } = await billing.getProducts({ productIdentifiers: [SHOP_ID], productType: 'inapp' });
+    shopProduct = (products || []).find(p => p.identifier === SHOP_ID) || null;
+    await recoverPurchases();
+  } catch (e) { shopProduct = null; }
+  updateSkip();
+}
+
+// the shop opens in the result panel, over a paused level or over the fail screen
+let shopReturn = null;
+function openShop() {
+  if (!storeReady()) return;
+  const fromPlay = state === 'play' || state === 'failing';
+  if (fromPlay) state = 'paused';
+  shopReturn = fromPlay ? 'play' : 'result';
+  $('res-eyebrow').textContent = T().shopEyebrow;
+  $('res-title').textContent = T().shopTitle;
+  $('res-facts').innerHTML = '<p>' + T().shopInfo(SHOP_SKIPS) + '</p>';
+  $('res-stars').hidden = true;
+  setActions([[T().buyButton(SHOP_SKIPS, shopProduct.priceString), buySkips, true], [T().cancel, closeShop]]);
+  $('result').hidden = false;
+}
+function closeShop() {
+  if (shopReturn === 'play') { $('result').hidden = true; state = 'play'; calibrate(); screenAwake(true); }
+  else fail();   // back to the fail screen, now with the skip button if skips were bought
+  shopReturn = null;
+}
+async function buySkips() {
+  if (shopBusy || !storeReady()) return;
+  shopBusy = true;
+  try {
+    const t = await billing.purchaseProduct({ productIdentifier: SHOP_ID, productType: 'inapp', isConsumable: true, autoAcknowledgePurchases: false });
+    if (grantPurchase(t)) showToast(T().bought(SHOP_SKIPS), 2500);
+    await consume(t);
+    closeShop();
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (/pending/i.test(msg)) showToast(T().buyPending, 5000);
+    else if (!/cancel/i.test(msg)) showToast(T().buyFailed, 4000);
+  } finally { shopBusy = false; }
+}
 
 function setHudLevel() {
   $('hud-level').textContent = T().level(levelIndex + 1);
@@ -988,6 +1091,7 @@ function win(kept) {
   // clearing a level that was skipped earlier gives its skip back
   const skipBack = progress.skipped.includes(levelIndex + 1);
   if (skipBack) progress.skipped = progress.skipped.filter(s => s !== levelIndex + 1);
+  progress.paidSkipped = progress.paidSkipped.filter(s => s !== levelIndex + 1);
   save();
   updateSkip();
   chord(true); buzz([20, 40, 30]);
@@ -1023,6 +1127,7 @@ function fail() {
   $('res-stars').hidden = true;
   const actions = [[T().tryAgain, () => startLevel(levelIndex), true], [T().levels, openMenu]];
   if (canSkip(levelIndex)) actions.splice(1, 0, [T().skipButton(skipsLeft()), skipLevel]);
+  else if (levelIndex < LEVELS.length - 1 && storeReady()) actions.splice(1, 0, [T().moreSkips, openShop]);
   setActions(actions);
   $('result').hidden = false;
 }
@@ -1070,7 +1175,7 @@ function buildGrid(world) {
     b.className = 'lvl' + (i === levelIndex ? ' current' : '');
     b.disabled = !isOpen(i);
     const st = progress.stars[String(i + 1)] || 0;
-    const skipped = progress.skipped.includes(i + 1);
+    const skipped = progress.skipped.includes(i + 1) || progress.paidSkipped.includes(i + 1);
     b.innerHTML = `${i + 1}<small>${st ? '★'.repeat(st) : skipped ? '↷' : '&nbsp;'}</small>`;
     b.setAttribute('aria-label', T().levelAria(i + 1, levelName(i), Math.round(L.maxLoss * 100), b.disabled) + (skipped ? T().skippedAria : ''));
     b.addEventListener('click', () => begin(i));
@@ -1171,6 +1276,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 
 // Android back button inside the Capacitor app: back to the level menu, or close the app from the menu
 const capApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+if (capApp) capApp.addListener('resume', () => recoverPurchases());
 if (capApp) capApp.addListener('backButton', () => { if ($('menu').hidden) openMenu(); else capApp.exitApp(); });
 $('btn-restart').addEventListener('click', () => { unlockAudio(); if (state !== 'menu') startLevel(levelIndex); });
 
@@ -1961,6 +2067,7 @@ function start(data) {
   resize();
   window.addEventListener('resize', resize);
   requestAnimationFrame(frame);
+  initShop();
 }
 
 if (window.claude && window.claude.hot && window.claude.hot.snapshot) {

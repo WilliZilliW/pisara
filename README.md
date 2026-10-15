@@ -73,6 +73,10 @@ Versionumero (versionCode) lasketaan tagista: `v1.1` → 10100, `v1.1.2` → 101
 
 Allekirjoitus tehdään latausavaimella, joka luetaan repon salaisuuksista `PISARA_UPLOAD_KEYSTORE_BASE64`, `PISARA_KEYSTORE_PASSWORD`, `PISARA_KEY_ALIAS` ja `PISARA_KEY_PASSWORD`. Avainta tai salasanoja ei pidetä repossa.
 
+### Ohitusten myynti
+
+Android-sovelluksessa (Google Playsta asennettuna) voi ostaa ohituksia, kun ilmaiset kolme on käytetty: ohitusnappiin tulee plusmerkki, ja epäonnistuneen tason ruudussa on Osta ohituksia -nappi. Ostot hoitaa Google Play Billing liitännäisellä `@capgo/native-purchases`. Play Consolessa tuotteen pitää olla sovelluksen sisäinen kertatuote tunnisteella `ohitukset_3` (3 ohitusta). Ostettu ohitus käytetään kerran, ilmaiset palautuvat edelleen. Peli kirjaa oston ensin edistymiseensä ja kuluttaa sen vasta sitten, ja kesken jääneet ostot haetaan, kun sovellus käynnistyy tai palaa etualalle. Verkkoversiossa ostoja ei ole, eikä niihin pidä luottaa GitHubin APK:ssa, joka on allekirjoitettu eri avaimella kuin Play-versio.
+
 ### Testiversio
 
 GitHub Actions ([.github/workflows/apk.yml](.github/workflows/apk.yml)) tekee testi-APK:n jokaisesta mainiin pushatusta muutoksesta ja julkaisee sen esijulkaisuna `testi`, joka korvaa edellisen: https://github.com/WilliZilliW/pisara/releases/download/testi/Pisara.apk. Testiversiot allekirjoitetaan repon avaimella `android/testiavain.keystore` (Androidin julkinen oletussalasana `android`), joten uusi testiversio asentuu edellisen päälle mutta ei virallisen version päälle.

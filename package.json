@@ -14,7 +14,8 @@
     "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.2",
-    "@capacitor/core": "^8.5.2"
+    "@capacitor/core": "^8.5.2",
+    "@capgo/native-purchases": "^8.9.6"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
