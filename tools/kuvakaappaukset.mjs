@@ -13,7 +13,7 @@ const port = 9333;
 const profile = path.join(root, '.chrome-kuvat');
 const page = pathToFileURL(path.join(root, 'www', '_kuvat.html')).href;
 const outDir = path.join(root, 'kauppa', 'kuvakaappaukset');
-const scenes = ['valikko', 'sokkelo', 'aurinko', 'sammal', 'kehä', 'viimeinen', 'tulos'];
+const scenes = ['valikko', 'sokkelo', 'aurinko', 'sammal', 'värit', 'hunaja', 'viimeinen', 'tulos'];   // Play takes up to 8
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const browser = spawn(chrome, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
